@@ -1,0 +1,71 @@
+# Flutter-specific files
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.packages
+pubspec.lock
+*.flutter-plugins
+*.flutter-plugins-dependencies
+
+# Android
+android/.gradle
+android/app/debug.keystore
+android/key.properties
+android/local.properties
+android/app/google-services.json
+
+# iOS
+ios/.symlinks
+ios/Flutter/Flutter.framework
+ios/Flutter/Generated.xcconfig
+ios/Pods/
+ios/.generated
+ios/Runner.xcworkspace
+ios/Runner/GoogleService-Info.plist
+
+# macOS
+macos/Flutter/ephemeral
+macos/.generated
+
+# Windows
+windows/flutter/ephemeral/
+
+# Linux
+linux/flutter/ephemeral/
+
+# Web
+web/.dart_tool/
+
+# Build
+build/
+.melos_tool/
+.dart_tool/
+.dart_tool/
+.idea/
+.vscode/
+*.iml
+*.log
+
+# Dart tool specific files
+.dart_tool/
+.dsv
+
+# VS Code
+.vscode/
+
+# JetBrains IDEs
+*.iml
+.idea/
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcworkspace
+
+# Firebase
+firebase_app_id_file.json
+
+# Misc
+*.DS_Store
+*.log
+*.swp
