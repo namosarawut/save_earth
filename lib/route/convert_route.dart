@@ -1,4 +1,12 @@
-enum Routes { loginAndRegister,mainApp}
+enum Routes {
+  loginAndRegister,
+  mainApp,
+  editProfile,
+  myItemList,
+  requestsMyItem,
+  requestsDetail,
+  myItemDetail,
+}
 
 extension TypeCoverter on Routes {
   String toStringPath() {
@@ -7,6 +15,16 @@ extension TypeCoverter on Routes {
         return '/';
       case Routes.loginAndRegister:
         return 'loginAndRegister';
+      case Routes.editProfile:
+        return 'editProfile';
+      case Routes.myItemList:
+        return 'myItemList';
+      case Routes.requestsMyItem:
+        return 'requestsMyItem';
+        case Routes.requestsDetail:
+        return 'requestsDetail';
+        case Routes.myItemDetail:
+        return 'myItemDetail';
     }
   }
 }

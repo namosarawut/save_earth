@@ -1,13 +1,22 @@
 
 import 'package:flutter/material.dart';
+import 'package:save_earth/presentation/screens/account/account_manage_screen.dart';
 import 'package:save_earth/presentation/screens/auth/login_register_screen.dart';
+import 'package:save_earth/presentation/screens/item/my_item_detail.dart';
+import 'package:save_earth/presentation/screens/item/my_item_list_screen.dart';
+import 'package:save_earth/presentation/screens/item/requests_detail_screen.dart';
+import 'package:save_earth/presentation/screens/item/the_requests_my_item.dart';
 import 'package:save_earth/presentation/screens/main/main_screen.dart';
 import 'package:save_earth/route/convert_route.dart';
 
 final Map<String, WidgetBuilder> evShopRoutes = {
   (Routes.mainApp).toStringPath(): (BuildContext _) => const MainAppScreen(),
   (Routes.loginAndRegister).toStringPath(): (BuildContext _) => const LoginAndRegisterPage(),
-
+  (Routes.editProfile).toStringPath(): (BuildContext _) => const EditProfilePage(),
+  (Routes.myItemList).toStringPath(): (BuildContext _) => const MyItemsListScreen(),
+  (Routes.requestsMyItem).toStringPath(): (BuildContext _) => const TheRequestsMyItemScreen(),
+  (Routes.requestsDetail).toStringPath(): (BuildContext _) => const RequestDetailPage(),
+  (Routes.myItemDetail).toStringPath(): (BuildContext _) =>  MyItemDetailScreen(),
 };
 
 class CurrentRouteObserver extends RouteObserver<PageRoute<dynamic>> {

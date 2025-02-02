@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>แอปต้องการเข้าถึงตำแหน่งของคุณเพื่อคำนวณเส้นทาง</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>แอปนี้ต้องการเข้าถึงคลังรูปภาพของคุณ</string>
+    <key>NSCameraUsageDescription</key>
+    <string>แอปนี้ต้องการใช้กล้องของคุณ</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

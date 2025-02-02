@@ -1,7 +1,12 @@
+import 'dart:developer';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:save_earth/route/convert_route.dart';
 
 class MarkerData {
   final String userId;
@@ -33,6 +38,7 @@ class MainAppScreen extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainAppScreen> {
+  int tapIndex = 0;
   LatLng? _currentPosition;
   final TextEditingController _searchController = TextEditingController();
   final MapController _mapController = MapController();
@@ -43,7 +49,8 @@ class _MainAppState extends State<MainAppScreen> {
       name: "Recycle Bin",
       description: "จุดรับขยะรีไซเคิล",
       category: "Recycling",
-      imagePath: "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
+      imagePath:
+          "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
       latlong: LatLng(18.7803, 99.0158),
       status: "active",
       createdAt: "2024-02-01",
@@ -53,7 +60,8 @@ class _MainAppState extends State<MainAppScreen> {
       name: "Donation Center",
       description: "บริจาคของใช้ที่ไม่ต้องการ",
       category: "Donation",
-      imagePath: "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
+      imagePath:
+          "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
       latlong: LatLng(18.8000, 99.0000),
       status: "active",
       createdAt: "2024-02-01",
@@ -63,7 +71,8 @@ class _MainAppState extends State<MainAppScreen> {
       name: "Second-hand Market",
       description: "ตลาดของมือสอง",
       category: "Marketplace",
-      imagePath: "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
+      imagePath:
+          "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
       latlong: LatLng(18.7700, 99.0200),
       status: "inactive",
       createdAt: "2024-02-01",
@@ -82,6 +91,16 @@ class _MainAppState extends State<MainAppScreen> {
     "Mickey Mouse Plush"
   ];
   List<String> filteredItems = [];
+  File? _profileImage;
+
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -133,8 +152,6 @@ class _MainAppState extends State<MainAppScreen> {
       _mapController.move(_currentPosition!, _currentZoom);
     }
   }
-
-
 
   void showRequestDialog(BuildContext context, MarkerData marker) {
     TextEditingController reasonController = TextEditingController();
@@ -211,7 +228,7 @@ class _MainAppState extends State<MainAppScreen> {
       context: context,
       builder: (BuildContext context) {
         return Container(
-          width: MediaQuery.of(context).size.width-16,
+          width: MediaQuery.of(context).size.width - 16,
           padding: EdgeInsets.all(16.0),
           child: ListView(
             // mainAxisSize: MainAxisSize.min,
@@ -220,8 +237,8 @@ class _MainAppState extends State<MainAppScreen> {
                 borderRadius: BorderRadius.circular(20), // กำหนดมุมโค้ง 20
                 child: Image.network(
                   marker.imagePath,
-                  width: MediaQuery.of(context).size.width-8,
-                  height: 200,  // ความสูง 16:9
+                  width: MediaQuery.of(context).size.width - 8,
+                  height: 200, // ความสูง 16:9
                   fit: BoxFit.cover, // ครอบคลุมพื้นที่โดยไม่เสียอัตราส่วน
                 ),
               ),
@@ -229,18 +246,25 @@ class _MainAppState extends State<MainAppScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Text(marker.name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(marker.name,
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
               SizedBox(height: 5),
               Container(
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(8),color: Color(0xffD9D9D9)),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Color(0xffD9D9D9)),
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      Text(marker.description, style: TextStyle(fontSize: 16),)
+                      Text(
+                        marker.description,
+                        style: TextStyle(fontSize: 16),
+                      )
                     ],
                   ),
                 ),
@@ -250,7 +274,10 @@ class _MainAppState extends State<MainAppScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Text("หมวดหมู่: ${marker.category}", style: TextStyle(fontSize: 16),)
+                  Text(
+                    "หมวดหมู่: ${marker.category}",
+                    style: TextStyle(fontSize: 16),
+                  )
                 ],
               ),
               SizedBox(height: 10),
@@ -259,7 +286,7 @@ class _MainAppState extends State<MainAppScreen> {
               ElevatedButton(
                 onPressed: () {
                   // Navigator.pushNamed(context, (Routes.mainApp).toStringPath());
-                  showRequestDialog(context,marker);
+                  showRequestDialog(context, marker);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade900,
@@ -271,7 +298,7 @@ class _MainAppState extends State<MainAppScreen> {
                     horizontal: 80,
                   ),
                 ),
-                child:  Text(
+                child: Text(
                   "ส่งคำขอ",
                   style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
@@ -282,147 +309,25 @@ class _MainAppState extends State<MainAppScreen> {
       },
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _currentPosition ?? LatLng(13.8588517, 101.99559),
-              initialZoom: _currentZoom,
-              onPositionChanged: ( pos, bool hasGesture) {
-                setState(() {
-                  _currentZoom = pos.zoom;
-                });
-              },
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                subdomains: ['a', 'b', 'c'],
-              ),
-              if (_currentPosition != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _currentPosition!,
-                      width: 50,
-                      height: 50,
-                      child: Icon(Icons.my_location, color: Colors.blue, size: 40),
-                    ),
-                  ],
-                ),
-              MarkerLayer(
-                markers: markers.map((marker) {
-                  return Marker(
-                    point: marker.latlong,
-                    width: 50,
-                    height: 50,
-                    child: GestureDetector(
-                      onTap: () => _showMarkerDetails(marker),
-                      child: Icon(
-                        Icons.location_on,
-                        color: marker.status == "active" ? Colors.green : Colors.red,
-                        size: 40,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-          Positioned(
-            top: 40,
-            left: 24,
-            right: 24,
-            child: Container(
-              height: 45,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: "Search for what you want",
-                  prefixIcon: Icon(Icons.search, color: Colors.black54),
-                  border: InputBorder.none,
-                  // contentPadding: EdgeInsets.symmetric(vertical: 20),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 75,
-            left: 32,
-            right: 32,
-            child: filteredItems.isNotEmpty
-                ? Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(10),
-                  bottomRight: Radius.circular(10),
-                ),
-              ),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: filteredItems.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(filteredItems[index]),
-                    onTap: () {
-                      _searchController.text = filteredItems[index];
-                      setState(() {
-                        filteredItems.clear();
-                      });
-                    },
-                  );
-                },
-              ),
-            )
-                : Container(),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).size.height*0.8,
-            left: MediaQuery.of(context).size.height*0.4,
-
-            child: GestureDetector(
-              onTap: (){
-                _getCurrentLocation();
-              },
-              child: Container(
-                height: 45,
-                width: 45,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(Icons.my_location,color: Colors.green.shade900,),
-              ),
-            ),
-          ),
-        ],
-      ),
+      body: tapIndex == 0
+          ? buildSearhScreen(context)
+          : tapIndex == 1
+              ? buildFAVScreen(context)
+              : tapIndex == 2
+                  ? buildProfileScreen(context)
+                  : SizedBox.shrink(),
       bottomNavigationBar: BottomNavigationBar(
+        onTap: (i) {
+          log("Tap Index: ${i}");
+          setState(() {
+            tapIndex = i;
+          });
+        },
+        currentIndex: tapIndex,
         items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
@@ -440,10 +345,270 @@ class _MainAppState extends State<MainAppScreen> {
       ),
     );
   }
+
+  Stack buildSearhScreen(BuildContext context) {
+    return Stack(
+      children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: _currentPosition ?? LatLng(13.8588517, 101.99559),
+            initialZoom: _currentZoom,
+            onPositionChanged: (pos, bool hasGesture) {
+              setState(() {
+                _currentZoom = pos.zoom;
+              });
+            },
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              subdomains: ['a', 'b', 'c'],
+            ),
+            if (_currentPosition != null)
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _currentPosition!,
+                    width: 50,
+                    height: 50,
+                    child:
+                        Icon(Icons.my_location, color: Colors.blue, size: 40),
+                  ),
+                ],
+              ),
+            MarkerLayer(
+              markers: markers.map((marker) {
+                return Marker(
+                  point: marker.latlong,
+                  width: 50,
+                  height: 50,
+                  child: GestureDetector(
+                    onTap: () => _showMarkerDetails(marker),
+                    child: Icon(
+                      Icons.location_on,
+                      color:
+                          marker.status == "active" ? Colors.green : Colors.red,
+                      size: 40,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+        Positioned(
+          top: 40,
+          left: 24,
+          right: 24,
+          child: Container(
+            height: 45,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: "Search for what you want",
+                prefixIcon: Icon(Icons.search, color: Colors.black54),
+                border: InputBorder.none,
+                // contentPadding: EdgeInsets.symmetric(vertical: 20),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 75,
+          left: 32,
+          right: 32,
+          child: filteredItems.isNotEmpty
+              ? Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(10),
+                      bottomRight: Radius.circular(10),
+                    ),
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: filteredItems.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(filteredItems[index]),
+                        onTap: () {
+                          _searchController.text = filteredItems[index];
+                          setState(() {
+                            filteredItems.clear();
+                          });
+                        },
+                      );
+                    },
+                  ),
+                )
+              : Container(),
+        ),
+        Positioned(
+          top: MediaQuery.of(context).size.height * 0.8,
+          left: MediaQuery.of(context).size.height * 0.4,
+          child: GestureDetector(
+            onTap: () {
+              _getCurrentLocation();
+            },
+            child: Container(
+              height: 45,
+              width: 45,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.my_location,
+                color: Colors.green.shade900,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildFAVScreen(BuildContext context) {
+    return Container();
+  }
+
+  Widget buildProfileScreen(BuildContext context) {
+    return Stack(children: [
+      Container(
+        height: MediaQuery.of(context).size.height,
+        decoration: BoxDecoration(
+      color: Color(0xffF1F4F9)
+        ),
+      ),
+      Container(
+        height: 150,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.green.shade900, Colors.green.shade400],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ),
+      Positioned(
+        top: 100,
+        left: 24,
+        child: GestureDetector(
+          onTap: _pickImage,
+          child: CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.white,
+            child: CircleAvatar(
+              radius: 48,
+              backgroundImage: _profileImage != null
+                  ? FileImage(_profileImage!)
+                  : AssetImage("assets/image/profile.jpeg") as ImageProvider,
+            ),
+          ),
+        ),
+      ),
+Padding(
+  padding: EdgeInsets.fromLTRB(0, 216, 0, 0),
+  child: Column(children: [
+    Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        SizedBox(width: 16,),
+        const Text(
+          "Namo Sarawut",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ],
+    ),
+    Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        SizedBox(width: 16,),
+        const Text(
+          "namo@gmail.com",
+          style: TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+      ],
+    ),
+
+    const SizedBox(height: 16),
+    Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        SizedBox(width: 16,),
+        const Text(
+          "การจัดการ",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ],
+    ),
+    const SizedBox(height: 16),
+    // Management Section
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+
+          _buildMenuItem("แก้ไขบัญชี", (Routes.editProfile).toStringPath()),
+          _buildMenuItem("รายการ order",(Routes.myItemList).toStringPath()),
+          _buildMenuItem("สร้างสิ่งของของฉัน",(Routes.editProfile).toStringPath()),
+        ],
+      ),
+    ),
+
+    const Spacer(),
+
+    // Logout Button
+    TextButton(
+      onPressed: () {
+        // Add logout logic
+      },
+      child: const Text(
+        "ออกจากระบบ",
+        style: TextStyle(fontSize: 16, color: Colors.red, fontWeight: FontWeight.bold),
+      ),
+    ),
+    const SizedBox(height: 20),
+  ],),
+)
+    ],);
+  }
+  Widget _buildMenuItem(String title, String stringPath) {
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ListTile(
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () {
+          Navigator.pushNamed(context, stringPath);
+        },
+      ),
+    );
+  }
 }
-
-
-
-
 
 
