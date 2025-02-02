@@ -156,9 +156,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 
-class MyItemDetailScreen extends StatelessWidget {
+class MyRequestsDetailScreen extends StatelessWidget {
 
-   MyItemDetailScreen({super.key});
+  const MyRequestsDetailScreen({super.key});
 
   Future<void> _openGoogleMaps(BuildContext context, Map<String, dynamic> args) async {
     Position position = await Geolocator.getCurrentPosition(
@@ -166,8 +166,8 @@ class MyItemDetailScreen extends StatelessWidget {
 
     double userLat = position.latitude;
     double userLng = position.longitude;
-    double destLat = args["latitude"];
-    double destLng = args["longitude"];
+    double destLat = args["item"]["latitude"];
+    double destLng = args["item"]["longitude"];
 
     final Uri googleMapsUrl = Uri.parse(
         "https://www.google.com/maps/dir/?api=1&origin=$userLat,$userLng&destination=$destLat,$destLng&travelmode=driving");
@@ -180,66 +180,136 @@ class MyItemDetailScreen extends StatelessWidget {
       );
     }
   }
-   Widget _buildDialogButton(BuildContext context, String text, Color color, VoidCallback onPressed) {
-     return ElevatedButton(
-       onPressed: onPressed,
-       style: ElevatedButton.styleFrom(
-         backgroundColor: color,
-         shape: RoundedRectangleBorder(
-           borderRadius: BorderRadius.circular(8),
-         ),
-         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-       ),
-       child: Text(text, style: const TextStyle(fontSize: 16, color: Colors.white)),
-     );
-   }
+  Widget _buildDialogButton(BuildContext context, String text, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+      ),
+      child: Text(text, style: const TextStyle(fontSize: 16, color: Colors.white)),
+    );
+  }
 
-   void _showConfirmDialog(BuildContext context, Map<String, dynamic> args) {
-     showDialog(
-       context: context,
-       builder: (BuildContext context) {
-         return Dialog(
-           shape: RoundedRectangleBorder(
-             borderRadius: BorderRadius.circular(16),
-           ),
-           child: Container(
-             width: 400,
-             height: 145,
-             padding: const EdgeInsets.all(20),
-             child: Column(
-               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-               children: [
-                 Text(
-                   "คุณแน่ใจหรือไม่ว่าจะลบ?",
-                   textAlign: TextAlign.center,
-                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                 ),
-                 Row(
-                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                   children: [
-                     _buildDialogButton(context, "ยกเลิก", Colors.grey, () {
-                       Navigator.of(context).pop();
-                     }),
-                     _buildDialogButton(context, "ลบ", Colors.green.shade900, () {
-                       // เพิ่มฟังก์ชันเมื่อกดยืนยัน
-                       Navigator.of(context).pop();
-                       // ScaffoldMessenger.of(context).showSnackBar(
-                       //   const SnackBar(content: Text("การลบเสร็จสมบูรณ์!")),
-                       // );
-                     }),
-                   ],
-                 ),
-               ],
-             ),
-           ),
-         );
-       },
-     );
-   }
+  void showRequestDialog(BuildContext context, Map<String, dynamic> args) {
+    TextEditingController reasonController = TextEditingController(text: "${args["reason"]}");
 
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20), // มุมโค้ง 20
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children:[
+              Text(
+                "แก้ไข เหตุผลการร้องขอ",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: reasonController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: "เหตุผลที่ท่านขอรับสิ่งของชิ้นนี้",
+                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: EdgeInsets.all(10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.green),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // ปิด Dialog
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[800], // สีเขียวเข้ม
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    "อัพเดทคำขอ",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
-   @override
+  void _showConfirmDialog(BuildContext context, Map<String, dynamic> args) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: 400,
+            height: 145,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "คุณแน่ใจหรือไม่ว่าจะลบ?",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildDialogButton(context, "ยกเลิก", Colors.grey, () {
+                      Navigator.of(context).pop();
+                    }),
+                    _buildDialogButton(context, "ลบ", Colors.green.shade900, () {
+                      // เพิ่มฟังก์ชันเมื่อกดยืนยัน
+                      Navigator.of(context).pop();
+                      // ScaffoldMessenger.of(context).showSnackBar(
+                      //   const SnackBar(content: Text("การลบเสร็จสมบูรณ์!")),
+                      // );
+                    }),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+
     final Map<String, dynamic>? args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     return Scaffold(
@@ -260,7 +330,7 @@ class MyItemDetailScreen extends StatelessWidget {
                 // Title
                 Center(
                   child: Text(
-                    args!["name"],
+                    args!["item"]["name"],
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -284,10 +354,12 @@ class MyItemDetailScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text("ข้อมูล", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        Row(
+                        args["status"] == "pending" ? Row(
                           children: [
                             ElevatedButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                showRequestDialog(context,args);
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
@@ -342,19 +414,23 @@ class MyItemDetailScreen extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
+                        ) : SizedBox.shrink(),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text("ชื่อ : ${args["name"]}",
+                    Text("ชื่อสิ่งของ : ${args["item"]["name"]}",
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                    Text("ประเภท : ${args["category"]}",
+                    Text("ประเภท : ${args["item"]["category"]}",
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                     Text("ชื่อผู้โพสต์ : ${args["item"]["posted_by"]["contact"]["first_name"]} ${args["item"]["posted_by"]["contact"]["last_name"]}",
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                    Text("เบอร์โทรศัพผู้โพสต์ : ${args["item"]["posted_by"]["contact"]["phone_number"]}",
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
 
                     const SizedBox(height: 16),
 
-                    const Text("คำอธิบาย", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
+                    const Text("เหตุผลการร้องขอ", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
@@ -363,10 +439,34 @@ class MyItemDetailScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        args["description"],
+                        args["reason"],
                         style: const TextStyle(fontSize: 14),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Text("สถานะ : ", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                         Text("${args["status"]=="pending"?"รออนุมัติ":args["status"]=="approved"?"อนุมัติแล้ว":args["status"]=="taken"?"มีผู้อื่นได้รับไปแล้ว":"เกิดข้อผิดพลาด"}", style: TextStyle(fontSize: 16, color: args["status"]=="pending"?Colors.black:args["status"]=="approved"?Colors.green:args["status"]=="taken"?Colors.red:Colors.red,fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    args["status"]=="approved"?  Column(
+                      children: [
+                        const SizedBox(height: 4),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Color(0xff0EC872),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            "ให้ทำการติดต่อ  ${args["item"]["posted_by"]["contact"]["first_name"]} ${args["item"]["posted_by"]["contact"]["last_name"]} เพื่อรับสิ่งของนี้",
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ],
+                    ):SizedBox.shrink(),
                   ],
                 ),
               ),
@@ -383,7 +483,7 @@ class MyItemDetailScreen extends StatelessWidget {
                 height: 200,
                 child: FlutterMap(
                   options: MapOptions(
-                    initialCenter: LatLng(args["latitude"], args["longitude"]),
+                    initialCenter: LatLng(args["item"]["latitude"], args["item"]["longitude"]),
                     initialZoom: 14.0,
                   ),
                   children: [
@@ -394,11 +494,12 @@ class MyItemDetailScreen extends StatelessWidget {
                     MarkerLayer(
                       markers: [
                         Marker(
-                          point: LatLng(args["latitude"], args["longitude"]),
+                          point: LatLng(args["item"]["latitude"],
+                              args["item"]["longitude"]),
                           width: 50,
                           height: 50,
-                          child:
-                          Icon(Icons.my_location, color: Colors.blue, size: 40),
+                          child: Icon(Icons.my_location,
+                              color: Colors.blue, size: 40),
                         ),
                       ],
                     ),

@@ -2,8 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:save_earth/presentation/screens/account/account_manage_screen.dart';
 import 'package:save_earth/presentation/screens/auth/login_register_screen.dart';
+import 'package:save_earth/presentation/screens/item/create_my_item_screen.dart';
 import 'package:save_earth/presentation/screens/item/my_item_detail.dart';
 import 'package:save_earth/presentation/screens/item/my_item_list_screen.dart';
+import 'package:save_earth/presentation/screens/item/my_requests_detail.dart';
 import 'package:save_earth/presentation/screens/item/requests_detail_screen.dart';
 import 'package:save_earth/presentation/screens/item/the_requests_my_item.dart';
 import 'package:save_earth/presentation/screens/main/main_screen.dart';
@@ -17,6 +19,8 @@ final Map<String, WidgetBuilder> evShopRoutes = {
   (Routes.requestsMyItem).toStringPath(): (BuildContext _) => const TheRequestsMyItemScreen(),
   (Routes.requestsDetail).toStringPath(): (BuildContext _) => const RequestDetailPage(),
   (Routes.myItemDetail).toStringPath(): (BuildContext _) =>  MyItemDetailScreen(),
+  (Routes.myRequestsDetail).toStringPath(): (BuildContext _) =>  MyRequestsDetailScreen(),
+  (Routes.createMyItem).toStringPath(): (BuildContext _) =>  CreateMyItemScreen(),
 };
 
 class CurrentRouteObserver extends RouteObserver<PageRoute<dynamic>> {

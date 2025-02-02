@@ -6,6 +6,8 @@ enum Routes {
   requestsMyItem,
   requestsDetail,
   myItemDetail,
+  myRequestsDetail,
+  createMyItem,
 }
 
 extension TypeCoverter on Routes {
@@ -21,10 +23,14 @@ extension TypeCoverter on Routes {
         return 'myItemList';
       case Routes.requestsMyItem:
         return 'requestsMyItem';
-        case Routes.requestsDetail:
+      case Routes.requestsDetail:
         return 'requestsDetail';
-        case Routes.myItemDetail:
+      case Routes.myItemDetail:
         return 'myItemDetail';
+      case Routes.myRequestsDetail:
+        return 'myRequestsDetail';
+      case Routes.createMyItem:
+        return 'createMyItem';
     }
   }
 }

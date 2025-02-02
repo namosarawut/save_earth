@@ -90,11 +90,89 @@ class _MainAppState extends State<MainAppScreen> {
     "Doraemon Plush",
     "Mickey Mouse Plush"
   ];
+  final List<Map<String, dynamic>> myFavoriteList = [
+    {
+      "favorite_id": 501,
+      "item": {
+        "item_id": 77,
+        "name": "ตู้เย็นเก่า",
+        "image_url":
+            "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
+        "category": "เครื่องใช้ไฟฟ้า",
+        "description": "ตู้เย็นยังใช้งานได้แต่มีรอยขีดข่วนเล็กน้อย",
+        "latitude": 13.7563,
+        "longitude": 100.5018,
+        "status": "available",
+        "created_at": "2025-01-29T08:30:00Z",
+        "posted_by": {
+          "user_id": 301,
+          "username": "jane_doe",
+          "contact": {
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "phone_number": "+66987654321"
+          }
+        }
+      },
+      "added_at": "2025-02-01T10:15:00Z"
+    },
+    {
+      "favorite_id": 502,
+      "item": {
+        "item_id": 88,
+        "name": "โต๊ะไม้เก่า",
+        "image_url":
+            "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
+        "category": "เฟอร์นิเจอร์",
+        "description": "โต๊ะไม้เก่าสภาพดี ไม่ได้ใช้แล้ว",
+        "latitude": 13.7363,
+        "longitude": 100.5238,
+        "status": "available",
+        "created_at": "2025-01-30T09:15:00Z",
+        "posted_by": {
+          "user_id": 302,
+          "username": "alice_wonder",
+          "contact": {
+            "first_name": "Alice",
+            "last_name": "Wonderland",
+            "phone_number": "+66678901234"
+          }
+        }
+      },
+      "added_at": "2025-02-01T11:20:00Z"
+    },
+    {
+      "favorite_id": 503,
+      "item": {
+        "item_id": 99,
+        "name": "ตุ๊กตาหมี",
+        "image_url":
+            "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
+        "category": "ของใช้ส่วนตัว",
+        "description": "ตุ๊กตาหมีนุ่มนิ่ม สภาพดี",
+        "latitude": 13.7451,
+        "longitude": 100.5392,
+        "status": "taken",
+        "created_at": "2025-01-28T14:45:00Z",
+        "posted_by": {
+          "user_id": 303,
+          "username": "bob_marley",
+          "contact": {
+            "first_name": "Bob",
+            "last_name": "Marley",
+            "phone_number": "+66543210987"
+          }
+        }
+      },
+      "added_at": "2025-02-01T12:00:00Z"
+    }
+  ];
   List<String> filteredItems = [];
   File? _profileImage;
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _profileImage = File(pickedFile.path);
@@ -490,111 +568,348 @@ class _MainAppState extends State<MainAppScreen> {
     );
   }
 
+  void showRequestDialogOnFav(
+      BuildContext context, Map<String, dynamic> requestListItem) {
+    TextEditingController reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20), // มุมโค้ง 20
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "เหตุผลการร้องขอ สิ่งของ",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: reasonController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: "เหตุผลที่ท่านขอรับสิ่งของชิ้นนี้",
+                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: EdgeInsets.all(10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.green),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // ปิด Dialog
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[800], // สีเขียวเข้ม
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    "ส่งคำขอ",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void showItemDetailsOnFav(Map<String, dynamic> requestListItem) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          width: MediaQuery.of(context).size.width - 16,
+          padding: EdgeInsets.all(16.0),
+          child: ListView(
+            // mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20), // กำหนดมุมโค้ง 20
+                child: Image.network(
+                  requestListItem['item']['image_url'],
+                  width: MediaQuery.of(context).size.width - 8,
+                  height: 200, // ความสูง 16:9
+                  fit: BoxFit.cover, // ครอบคลุมพื้นที่โดยไม่เสียอัตราส่วน
+                ),
+              ),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text(requestListItem['item']['name'],
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              SizedBox(height: 5),
+              Container(
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Color(0xffD9D9D9)),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(
+                        requestListItem['item']['description'],
+                        style: TextStyle(fontSize: 16),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+              // Text(marker.description),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text(
+                    "หมวดหมู่: ${requestListItem['item']['category']}",
+                    style: TextStyle(fontSize: 16),
+                  )
+                ],
+              ),
+              SizedBox(height: 10),
+              Text("ลงประกาศเมื่อ: ${requestListItem['item']['created_at']}"),
+              SizedBox(height: 40),
+              ElevatedButton(
+                onPressed: () {
+                  // Navigator.pushNamed(context, (Routes.mainApp).toStringPath());
+                  showRequestDialogOnFav(context, requestListItem);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade900,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 80,
+                  ),
+                ),
+                child: Text(
+                  "ส่งคำขอ",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget buildFAVScreen(BuildContext context) {
-    return Container();
+    return Container(
+      color: Color(0xffF1F4F9),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 50,
+            ),
+            Row(
+              children: [
+                const Center(
+                  child: Text(
+                    "รายการ ถูกใจของฉัน",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+            // Order List
+            Expanded(
+              child: ListView.builder(
+                itemCount: myFavoriteList.length,
+                itemBuilder: (context, index) {
+                  final requestListItem = myFavoriteList[index];
+                  // final requestCount = order["requests"].length;
+                  return Dismissible(
+                    key: Key(requestListItem["item"]["name"]),
+                    // ต้องใช้ Key ที่ไม่ซ้ำกัน
+                    direction: DismissDirection.endToStart,
+                    // สไลด์จากขวาไปซ้าย
+                    background: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.only(right: 20),
+                      child: Icon(Icons.delete, color: Colors.white),
+                    ),
+                    onDismissed: (direction) {
+                      // ใส่โค้ดลบรายการที่นี่
+                      print("${requestListItem["item"]["name"]} ถูกลบ!");
+                    },
+                    child: Card(
+                      elevation: 1,
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      child: ListTile(
+                        title: Text(requestListItem["item"]["name"],
+                            style: TextStyle(fontSize: 16)),
+                        trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          showItemDetailsOnFav(requestListItem);
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )
+          ],
+        ),
+      ),
+    );
   }
 
   Widget buildProfileScreen(BuildContext context) {
-    return Stack(children: [
-      Container(
-        height: MediaQuery.of(context).size.height,
-        decoration: BoxDecoration(
-      color: Color(0xffF1F4F9)
+    return Stack(
+      children: [
+        Container(
+          height: MediaQuery.of(context).size.height,
+          decoration: BoxDecoration(color: Color(0xffF1F4F9)),
         ),
-      ),
-      Container(
-        height: 150,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.green.shade900, Colors.green.shade400],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      ),
-      Positioned(
-        top: 100,
-        left: 24,
-        child: GestureDetector(
-          onTap: _pickImage,
-          child: CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.white,
-            child: CircleAvatar(
-              radius: 48,
-              backgroundImage: _profileImage != null
-                  ? FileImage(_profileImage!)
-                  : AssetImage("assets/image/profile.jpeg") as ImageProvider,
+        Container(
+          height: 150,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.green.shade900, Colors.green.shade400],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
         ),
-      ),
-Padding(
-  padding: EdgeInsets.fromLTRB(0, 216, 0, 0),
-  child: Column(children: [
-    Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        SizedBox(width: 16,),
-        const Text(
-          "Namo Sarawut",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Positioned(
+          top: 100,
+          left: 24,
+          child: GestureDetector(
+            onTap: _pickImage,
+            child: CircleAvatar(
+              radius: 50,
+              backgroundColor: Colors.white,
+              child: CircleAvatar(
+                radius: 48,
+                backgroundImage: _profileImage != null
+                    ? FileImage(_profileImage!)
+                    : AssetImage("assets/image/profile.jpeg") as ImageProvider,
+              ),
+            ),
+          ),
         ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(0, 216, 0, 0),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 16,
+                  ),
+                  const Text(
+                    "Namo Sarawut",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 16,
+                  ),
+                  const Text(
+                    "namo@gmail.com",
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 16,
+                  ),
+                  const Text(
+                    "การจัดการ",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Management Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  children: [
+                    _buildMenuItem(
+                        "แก้ไขบัญชี", (Routes.editProfile).toStringPath()),
+                    _buildMenuItem(
+                        "รายการ order", (Routes.myItemList).toStringPath()),
+                    _buildMenuItem("สร้างสิ่งของของฉัน",
+                        (Routes.createMyItem).toStringPath()),
+                  ],
+                ),
+              ),
+
+              const Spacer(),
+
+              // Logout Button
+              TextButton(
+                onPressed: () {
+                  // Add logout logic
+                },
+                child: const Text(
+                  "ออกจากระบบ",
+                  style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        )
       ],
-    ),
-    Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        SizedBox(width: 16,),
-        const Text(
-          "namo@gmail.com",
-          style: TextStyle(fontSize: 14, color: Colors.grey),
-        ),
-      ],
-    ),
-
-    const SizedBox(height: 16),
-    Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        SizedBox(width: 16,),
-        const Text(
-          "การจัดการ",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ],
-    ),
-    const SizedBox(height: 16),
-    // Management Section
-    Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        children: [
-
-          _buildMenuItem("แก้ไขบัญชี", (Routes.editProfile).toStringPath()),
-          _buildMenuItem("รายการ order",(Routes.myItemList).toStringPath()),
-          _buildMenuItem("สร้างสิ่งของของฉัน",(Routes.editProfile).toStringPath()),
-        ],
-      ),
-    ),
-
-    const Spacer(),
-
-    // Logout Button
-    TextButton(
-      onPressed: () {
-        // Add logout logic
-      },
-      child: const Text(
-        "ออกจากระบบ",
-        style: TextStyle(fontSize: 16, color: Colors.red, fontWeight: FontWeight.bold),
-      ),
-    ),
-    const SizedBox(height: 20),
-  ],),
-)
-    ],);
+    );
   }
+
   Widget _buildMenuItem(String title, String stringPath) {
     return Card(
       elevation: 1,
@@ -610,5 +925,3 @@ Padding(
     );
   }
 }
-
-
