@@ -440,8 +440,8 @@ class _MainAppState extends State<MainAppScreen> {
           ),
           children: [
             TileLayer(
-              urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-              subdomains: ['a', 'b', 'c'],
+              urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", // ไม่มี subdomain
+              userAgentPackageName: 'com.example.save_earth',
             ),
             if (_currentPosition != null)
               MarkerLayer(
@@ -536,8 +536,8 @@ class _MainAppState extends State<MainAppScreen> {
               : Container(),
         ),
         Positioned(
-          top: MediaQuery.of(context).size.height * 0.8,
-          left: MediaQuery.of(context).size.height * 0.4,
+          top: MediaQuery.of(context).size.height * 0.85,
+          left: MediaQuery.of(context).size.width * 0.85,
           child: GestureDetector(
             onTap: () {
               _getCurrentLocation();

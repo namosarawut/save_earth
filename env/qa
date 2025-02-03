@@ -1,0 +1,2 @@
+ENVIRONMENT_NAME=qa
+BFF_BASE_URL=https:qa.com
