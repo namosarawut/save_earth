@@ -11,13 +11,17 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:save_earth/core/app_core.dart';
 import 'package:save_earth/data/data_store.dart';
+import 'package:save_earth/firebase_options.dart';
 import 'package:save_earth/logic/Bloc/bloc.dart';
 import 'package:save_earth/presentation/screens/auth/login_register_screen.dart';
 import 'package:save_earth/route/map_routing.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // ✅ ต้องเรียกก่อนรันแอป
+  WidgetsFlutterBinding.ensureInitialized(); // สำคัญ! ใช้เพื่อให้ Flutter ทำงานกับ async functions ได้
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // ตรวจสอบให้แน่ใจว่าไฟล์ firebase_options.dart ถูกสร้างแล้ว
+  );
+
   runApp(EvApp());
 }
 

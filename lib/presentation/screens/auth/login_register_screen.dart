@@ -15,6 +15,11 @@ class _LoginAndRegisterState extends State<LoginAndRegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    return BlocConsumer<GoogleAuthBloc, GoogleAuthState>(
+  listener: (context, state) {
+    print("");
+  },
+  builder: (context, state) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: Stack(
@@ -279,5 +284,7 @@ class _LoginAndRegisterState extends State<LoginAndRegisterPage> {
         ],
       ),
     );
+  },
+);
   }
 }

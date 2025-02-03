@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:equatable/equatable.dart';
@@ -11,11 +13,14 @@ class GoogleAuthBloc extends Bloc<GoogleAuthEvent, GoogleAuthState> {
 
   GoogleAuthBloc() : super(AuthInitial()) {
     on<GoogleSignInRequested>((event, emit) async {
+      log("GoogleSignInRequested");
       emit(AuthLoading());
-
       try {
+        log("GoogleSignInAccount");
         final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+        log("logedin");
         if (googleUser == null) {
+          log("Unauthenticated");
           emit(Unauthenticated());
           return;
         }
@@ -31,10 +36,11 @@ class GoogleAuthBloc extends Bloc<GoogleAuthEvent, GoogleAuthState> {
         final UserCredential userCredential =
         await _auth.signInWithCredential(credential);
 
-        print("email: ${userCredential.user!.email}");
-        print("uid: ${userCredential.user!.uid}");
+        log("email: ${userCredential.user!.email}");
+        log("uid: ${userCredential.user!.uid}");
         emit(Authenticated(userCredential.user!));
       } catch (e) {
+        log("Failed to sign in with Google: $e");
         emit(AuthError("Failed to sign in with Google: $e"));
       }
     });
