@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:save_earth/logic/Bloc/google_auth/google_auth_bloc.dart';
 import 'package:save_earth/route/convert_route.dart';
 
 class LoginAndRegisterPage extends StatefulWidget {
@@ -235,7 +237,9 @@ class _LoginAndRegisterState extends State<LoginAndRegisterPage> {
 
                         // Google Login Button
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            context.read<GoogleAuthBloc>().add(GoogleSignInRequested());
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             shape: RoundedRectangleBorder(

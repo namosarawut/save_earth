@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,7 +15,9 @@ import 'package:save_earth/logic/Bloc/bloc.dart';
 import 'package:save_earth/presentation/screens/auth/login_register_screen.dart';
 import 'package:save_earth/route/map_routing.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // ✅ ต้องเรียกก่อนรันแอป
   runApp(EvApp());
 }
 
