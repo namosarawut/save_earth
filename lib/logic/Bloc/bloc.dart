@@ -1,11 +1,22 @@
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:save_earth/logic/Bloc/google_auth/google_auth_bloc.dart';
+import 'package:save_earth/logic/Bloc/auth/auth_bloc.dart';
+import 'package:save_earth/repositores/auth_repository.dart';
+import 'package:save_earth/service/api_service.dart';
 
 import 'InitBloc/init_bloc.dart';
 
-final List<BlocProvider> blocs = [
-  BlocProvider(create: (_) => InitBloc()),
-  BlocProvider<GoogleAuthBloc>(create: (_) => GoogleAuthBloc()),
+class BlocList {
+  final AuthRepository authRepository;
+  BlocList(this.authRepository);
 
-];
+
+
+  List<BlocProvider> get blocs {
+    return [
+      BlocProvider(create: (_) => InitBloc()),
+      BlocProvider<GoogleAuthBloc>(create: (_) => GoogleAuthBloc()),
+      BlocProvider<AuthBloc>(create: (_) => AuthBloc(authRepository)),
+    ];
+  }
+}

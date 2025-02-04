@@ -7,7 +7,7 @@ abstract class GoogleAuthState extends Equatable {
 
 class AuthInitial extends GoogleAuthState {}
 
-class AuthLoading extends GoogleAuthState {}
+class GoogleAuthLoading extends GoogleAuthState {}
 
 class Authenticated extends GoogleAuthState {
   final User user;

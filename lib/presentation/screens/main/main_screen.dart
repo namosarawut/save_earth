@@ -2,10 +2,14 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:save_earth/data/local_storage_helper.dart';
+import 'package:save_earth/data/model/user_model.dart';
+import 'package:save_earth/logic/Bloc/auth/auth_bloc.dart';
 import 'package:save_earth/route/convert_route.dart';
 
 class MarkerData {
@@ -43,6 +47,7 @@ class _MainAppState extends State<MainAppScreen> {
   final TextEditingController _searchController = TextEditingController();
   final MapController _mapController = MapController();
   double _currentZoom = 13.0;
+
   final List<MarkerData> markers = [
     MarkerData(
       userId: "user_01",
@@ -179,10 +184,19 @@ class _MainAppState extends State<MainAppScreen> {
       });
     }
   }
+  UserModel? user;
+  Future<void> getUserData() async {
+    setState(() async {
+      user = await LocalStorageHelper.getUser();
+    });
+
+  }
+
 
   @override
   void initState() {
     super.initState();
+    getUserData();
     _getCurrentLocation();
     _searchController.addListener(() {
       filterSearchResults();
@@ -387,6 +401,68 @@ class _MainAppState extends State<MainAppScreen> {
       },
     );
   }
+  Widget _buildDialogButton(BuildContext context, String text, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+      ),
+      child: Text(text, style: const TextStyle(fontSize: 16, color: Colors.white)),
+    );
+  }
+
+  void _showLogoutConfirmDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: 400,
+            height: 300,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "คุณแน่ใจหรือไม่ว่าต้องการ ออกจากระบบ",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildDialogButton(context, "ยกเลิก", Colors.grey, () {
+                      Navigator.of(context).pop();
+                    }),
+                    _buildDialogButton(context, "ใช่", Colors.green.shade900, () {
+                      log("logout");
+                      context.read<AuthBloc>().add(LogoutUser());
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pushNamedAndRemoveUntil(context,     (Routes.loginAndRegister).toStringPath(), (route) => false);
+                        } else {
+                          Navigator.pushReplacementNamed(context,     (Routes.loginAndRegister).toStringPath()); // ถ้าไม่มี Route ให้ใช้ Replacement
+                        }
+                      });
+                      Navigator.of(context).pop();
+                    }),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -795,117 +871,125 @@ class _MainAppState extends State<MainAppScreen> {
     );
   }
 
-  Widget buildProfileScreen(BuildContext context) {
-    return Stack(
+  Widget buildProfileScreen(BuildContext context)  {
+
+    return ListView(
       children: [
         Container(
-          height: MediaQuery.of(context).size.height,
-          decoration: BoxDecoration(color: Color(0xffF1F4F9)),
-        ),
-        Container(
-          height: 150,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.green.shade900, Colors.green.shade400],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        Positioned(
-          top: 100,
-          left: 24,
-          child: GestureDetector(
-            onTap: _pickImage,
-            child: CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.white,
-              child: CircleAvatar(
-                radius: 48,
-                backgroundImage: _profileImage != null
-                    ? FileImage(_profileImage!)
-                    : AssetImage("assets/image/profile.jpeg") as ImageProvider,
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(0, 216, 0, 0),
-          child: Column(
+          height: 600,
+          child: Stack(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 16,
-                  ),
-                  const Text(
-                    "Namo Sarawut",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ],
+              Container(
+                height: MediaQuery.of(context).size.height,
+                decoration: BoxDecoration(color: Color(0xffF1F4F9)),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 16,
+              Container(
+                height: 150,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade900, Colors.green.shade400],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const Text(
-                    "namo@gmail.com",
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
+                ),
               ),
-
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 16,
+              Positioned(
+                top: 100,
+                left: 24,
+                child: GestureDetector(
+                  onTap: _pickImage,
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.white,
+                    child: CircleAvatar(
+                      radius: 48,
+                      backgroundImage: _profileImage != null
+                          ? FileImage(_profileImage!)
+                          : AssetImage("assets/image/profile.jpeg") as ImageProvider,
+                    ),
                   ),
-                  const Text(
-                    "การจัดการ",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 16),
-              // Management Section
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.fromLTRB(0, 216, 0, 0),
                 child: Column(
                   children: [
-                    _buildMenuItem(
-                        "แก้ไขบัญชี", (Routes.editProfile).toStringPath()),
-                    _buildMenuItem(
-                        "รายการ order", (Routes.myItemList).toStringPath()),
-                    _buildMenuItem("สร้างสิ่งของของฉัน",
-                        (Routes.createMyItem).toStringPath()),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                        ),
+                         Text(
+                          "${user!.username}",
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                        ),
+                         Text(
+                          "${user!.email}",
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                        ),
+                        const Text(
+                          "การจัดการ",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Management Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        children: [
+                          _buildMenuItem(
+                              "แก้ไขบัญชี", (Routes.editProfile).toStringPath()),
+                          _buildMenuItem(
+                              "รายการ order", (Routes.myItemList).toStringPath()),
+                          _buildMenuItem("สร้างสิ่งของของฉัน",
+                              (Routes.createMyItem).toStringPath()),
+                        ],
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Logout Button
+                    TextButton(
+                      onPressed: () {
+                        _showLogoutConfirmDialog(context);
+                      },
+                      child: const Text(
+                        "ออกจากระบบ",
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
-              ),
-
-              const Spacer(),
-
-              // Logout Button
-              TextButton(
-                onPressed: () {
-                  // Add logout logic
-                },
-                child: const Text(
-                  "ออกจากระบบ",
-                  style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 20),
+              )
             ],
           ),
-        )
+        ),
       ],
     );
   }

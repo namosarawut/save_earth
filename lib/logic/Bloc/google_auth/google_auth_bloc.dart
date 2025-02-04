@@ -14,7 +14,7 @@ class GoogleAuthBloc extends Bloc<GoogleAuthEvent, GoogleAuthState> {
   GoogleAuthBloc() : super(AuthInitial()) {
     on<GoogleSignInRequested>((event, emit) async {
       log("GoogleSignInRequested");
-      emit(AuthLoading());
+      emit(GoogleAuthLoading());
       try {
         log("GoogleSignInAccount");
         final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
