@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:save_earth/logic/Bloc/auth/auth_bloc.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -11,13 +13,13 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController emailController =
+   TextEditingController emailController =
   TextEditingController(text: "namo@gmail.com");
-  final TextEditingController usernameController =
+   TextEditingController usernameController =
   TextEditingController(text: "namotosan");
-  final TextEditingController firstNameController = TextEditingController();
-  final TextEditingController lastNameController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
+   TextEditingController firstNameController = TextEditingController();
+   TextEditingController lastNameController = TextEditingController();
+   TextEditingController phoneController = TextEditingController();
 
   String? _validateRequired(String? value, String fieldName) {
     if (value == null || value.trim().isEmpty) {
@@ -38,48 +40,124 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      bottomNavigationBar:   Container(
-        color: Colors.grey[100],
-        child: Row(mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: MediaQuery.of(context).size.width-23,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    // ถ้าผ่านการตรวจสอบ ให้ดำเนินการบันทึก
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('บันทึกข้อมูลเรียบร้อย!')),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade900,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+    return BlocConsumer<AuthBloc, AuthState>(
+  listener: (context, authState) {
+    if(authState is ProfileUpdateSuccess){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('บันทึกข้อมูลเรียบร้อย!')),
+      );
+    }
+    if(authState is UserFetched){
+    emailController = TextEditingController(text: authState.user.email);
+    usernameController =TextEditingController(text: authState.user.username);
+    firstNameController = TextEditingController(text: authState.user.firstName ?? "");
+    lastNameController = TextEditingController(text: authState.user.lastName ?? "");
+    phoneController = TextEditingController(text: authState.user.phoneNumber ?? "");
+    }
+
+  },
+  builder: (context, authState) {
+    if(authState is AuthLoading){
+      return Scaffold(
+        body: Container(width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
+          color: Color(0xff598E0A),
+          child: Center(child: CircularProgressIndicator(color: Colors.white,)),),
+      );
+    }else if(authState is UserFetched) {
+      return Scaffold(
+        backgroundColor: Colors.grey[100],
+        bottomNavigationBar:   Container(
+          color: Colors.grey[100],
+          child: Row(mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: MediaQuery.of(context).size.width-23,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      // ถ้าผ่านการตรวจสอบ ให้ดำเนินการบันทึก
+                      context.read<AuthBloc>().add(UpdateUserProfile(
+                        userId: authState.user.userId,
+                        firstName:  firstNameController.text,
+                        lastName: lastNameController.text,
+                        phoneNumber:  phoneController.text,
+                      ));
+
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade900,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text(
-                  "บันทึก",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  child: const Text(
+                    "บันทึก",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Form(
+            key: _formKey,
+            child: ListView(
 
+              children: [
+                const SizedBox(height: 0),
+                // Back Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, size: 30),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Center(
+                      child: Text(
+                        "แก้ไขข้อมูลบัญชี",
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Form Fields
+                _buildTextField("email", emailController, isReadOnly: true),
+                _buildTextField("username", usernameController, isReadOnly: true),
+                _buildTextField("ชื่อจริง", firstNameController,
+                    validator: (value) => _validateRequired(value, "ชื่อจริง")),
+                _buildTextField("นามสกุล", lastNameController,
+                    validator: (value) => _validateRequired(value, "นามสกุล")),
+                _buildTextField(
+                  "เบอร์โทรศัพท์",
+                  phoneController,
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, _PhoneNumberFormatter()],
+                  validator: _validatePhoneNumber,
+                ),
+
+              ],
+            ),
+          ),
+        ),
+      );
+    }else{
+      return Scaffold(
+        body: Container(width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
+          color: Color(0xff598E0A),
+          child: Column(
             children: [
-              const SizedBox(height: 0),
-              // Back Button
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -97,29 +175,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ],
               ),
-
-              const SizedBox(height: 24),
-
-              // Form Fields
-              _buildTextField("email", emailController, isReadOnly: true),
-              _buildTextField("username", usernameController, isReadOnly: true),
-              _buildTextField("ชื่อจริง", firstNameController,
-                  validator: (value) => _validateRequired(value, "ชื่อจริง")),
-              _buildTextField("นามสกุล", lastNameController,
-                  validator: (value) => _validateRequired(value, "นามสกุล")),
-              _buildTextField(
-                "เบอร์โทรศัพท์",
-                phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly, _PhoneNumberFormatter()],
-                validator: _validatePhoneNumber,
-              ),
-
+              Center(child: Icon(Icons.error_outline,color: Colors.white,)),
             ],
-          ),
-        ),
-      ),
-    );
+          ),),
+      );
+    }
+
+  },
+);
   }
 
   Widget _buildTextField(

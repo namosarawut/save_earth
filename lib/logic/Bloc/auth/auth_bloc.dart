@@ -1,5 +1,6 @@
 
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:save_earth/data/local_storage_helper.dart';
 import 'package:save_earth/data/model/user_model.dart';
@@ -58,7 +59,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthInitial()); // กลับไปสู่สถานะเริ่มต้น
     });
 
+    on<GetUserById>((event, emit) async {
+      emit(AuthLoading());
+      try {
+        final user = await repository.getUserById(event.userId);
+        await LocalStorageHelper.removeUser();
+        await LocalStorageHelper.saveUser(user);
+        emit(UserFetched(user));
+      } catch (e) {
+        emit(AuthFailure("Failed to fetch user"));
+      }
+    });
+
+    on<UpdateUserProfile>((event, emit) async {
+      emit(AuthLoading());
+      try {
+        final message = await repository.updateUserProfile(
+          userId: event.userId,
+          firstName: event.firstName,
+          lastName: event.lastName,
+          phoneNumber: event.phoneNumber,
+          profileImage: event.profileImage,
+        );
+
+        emit(ProfileUpdateSuccess(message));
+
+        // ดึงข้อมูลใหม่หลังจากอัปเดตโปรไฟล์
+        final updatedUser = await repository.getUserById(event.userId);
+        await LocalStorageHelper.saveUser(updatedUser);
+        emit(UserFetched(updatedUser));
+      } catch (e) {
+        emit(AuthFailure("Failed to update profile"));
+      }
+    });
+
   }
+
 }
 
 

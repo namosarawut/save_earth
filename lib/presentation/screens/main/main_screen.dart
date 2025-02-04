@@ -7,32 +7,15 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mime/mime.dart';
 import 'package:save_earth/data/local_storage_helper.dart';
+import 'package:save_earth/data/model/item_model.dart';
 import 'package:save_earth/data/model/user_model.dart';
 import 'package:save_earth/logic/Bloc/auth/auth_bloc.dart';
+import 'package:save_earth/logic/Bloc/item/item_bloc.dart';
 import 'package:save_earth/route/convert_route.dart';
 
-class MarkerData {
-  final String userId;
-  final String name;
-  final String description;
-  final String category;
-  final String imagePath;
-  final LatLng latlong;
-  final String status;
-  final String createdAt;
 
-  MarkerData({
-    required this.userId,
-    required this.name,
-    required this.description,
-    required this.category,
-    required this.imagePath,
-    required this.latlong,
-    required this.status,
-    required this.createdAt,
-  });
-}
 
 class MainAppScreen extends StatefulWidget {
   const MainAppScreen({super.key});
@@ -47,54 +30,7 @@ class _MainAppState extends State<MainAppScreen> {
   final TextEditingController _searchController = TextEditingController();
   final MapController _mapController = MapController();
   double _currentZoom = 13.0;
-
-  final List<MarkerData> markers = [
-    MarkerData(
-      userId: "user_01",
-      name: "Recycle Bin",
-      description: "จุดรับขยะรีไซเคิล",
-      category: "Recycling",
-      imagePath:
-          "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
-      latlong: LatLng(18.7803, 99.0158),
-      status: "active",
-      createdAt: "2024-02-01",
-    ),
-    MarkerData(
-      userId: "user_02",
-      name: "Donation Center",
-      description: "บริจาคของใช้ที่ไม่ต้องการ",
-      category: "Donation",
-      imagePath:
-          "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
-      latlong: LatLng(18.8000, 99.0000),
-      status: "active",
-      createdAt: "2024-02-01",
-    ),
-    MarkerData(
-      userId: "user_03",
-      name: "Second-hand Market",
-      description: "ตลาดของมือสอง",
-      category: "Marketplace",
-      imagePath:
-          "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
-      latlong: LatLng(18.7700, 99.0200),
-      status: "inactive",
-      createdAt: "2024-02-01",
-    ),
-  ];
-  List<String> allItems = [
-    "Teddy Bear",
-    "Stuffed Dog",
-    "Stuffed Cat",
-    "Stuffed Rabbit",
-    "Stuffed Panda",
-    "Stuffed Penguin",
-    "Stuffed Lion",
-    "Stuffed Elephant",
-    "Doraemon Plush",
-    "Mickey Mouse Plush"
-  ];
+  List<String>? allItems;
   final List<Map<String, dynamic>> myFavoriteList = [
     {
       "favorite_id": 501,
@@ -176,26 +112,107 @@ class _MainAppState extends State<MainAppScreen> {
   File? _profileImage;
 
   Future<void> _pickImage() async {
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+
     if (pickedFile != null) {
-      setState(() {
-        _profileImage = File(pickedFile.path);
-      });
+      print("🔍 Selected File: ${pickedFile.path}");
+      String? mimeType = lookupMimeType(pickedFile.path); // ตรวจสอบ MIME type
+      print("📌 MIME Type: $mimeType");
+
+      if (mimeType == "image/jpeg" || mimeType == "image/png" || mimeType == "image/jpg") {
+        final user = await LocalStorageHelper.getUser(); // โหลดข้อมูล user
+
+        if (user == null) {
+          print("⚠️ User is null. Cannot update profile.");
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("⚠️ ไม่สามารถอัพเดทโปรไฟล์ได้ กรุณาลองใหม่"))
+          );
+          return;
+        }
+
+        // อัปเดตโปรไฟล์ผ่าน Bloc
+        context.read<AuthBloc>().add(UpdateUserProfile(
+          userId: user.userId,
+          firstName: user.firstName?.isEmpty ?? true ? "" : user.firstName!,
+          lastName: user.lastName?.isEmpty ?? true ? "" : user.lastName!,
+          phoneNumber: user.phoneNumber?.isEmpty ?? true ? "" : user.phoneNumber!,
+          profileImage: File(pickedFile.path),
+        ));
+
+        // อัปเดต UI
+        setState(() {
+          _profileImage = File(pickedFile.path);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("✅ อัพเดทรูปโปรไฟล์เรียบร้อย"))
+        );
+
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("⚠️ โปรดเลือกไฟล์ JPEG หรือ PNG เท่านั้น"))
+        );
+      }
     }
   }
-  UserModel? user;
-  Future<void> getUserData() async {
-    setState(() async {
-      user = await LocalStorageHelper.getUser();
-    });
 
+
+  UserModel? user;
+
+  Future<void> getUserData() async {
+    user = await LocalStorageHelper.getUser();
   }
+
+  void initApp() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        context.read<ItemBloc>().add(LoadUniqueItemNames());
+
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("⚠️ กรุณาเปิด GPS เพื่อใช้ฟีเจอร์นี้")),
+          );
+          return;
+        }
+
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.deniedForever) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("⚠️ คุณต้องเปิดสิทธิ์ GPS ใน Settings")),
+            );
+            return;
+          }
+        }
+
+        Position position = await Geolocator.getCurrentPosition();
+
+        // ✅ ตรวจสอบว่า Widget ยังอยู่ใน Tree ก่อนเรียกใช้ context
+        if (!mounted) return;
+
+        context.read<ItemBloc>().add(SearchItems(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        ));
+
+      } catch (e) {
+        if (!mounted) return;
+        print("🚨 Error getting location: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ เกิดข้อผิดพลาดในการดึงตำแหน่ง")),
+        );
+      }
+    });
+  }
+
 
 
   @override
   void initState() {
     super.initState();
+    initApp();
     getUserData();
     _getCurrentLocation();
     _searchController.addListener(() {
@@ -207,12 +224,39 @@ class _MainAppState extends State<MainAppScreen> {
     String query = _searchController.text.toLowerCase();
     setState(() {
       if (query.isNotEmpty) {
-        filteredItems = allItems
+        filteredItems = allItems!
             .where((item) => item.toLowerCase().contains(query))
             .toList();
       } else {
         filteredItems.clear(); // ล้างรายการถ้าไม่มีการพิมพ์ข้อความ
       }
+    });
+  }
+
+  void _searchItem(int index) async {
+    // กำหนดค่าค้นหา
+    final String searchText = filteredItems[index];
+
+    // ดึงตำแหน่งปัจจุบัน
+    Position position;
+    try {
+      position = await Geolocator.getCurrentPosition();
+    } catch (e) {
+      print("Error getting location: $e");
+      return;
+    }
+
+    // ส่ง event ไปที่ Bloc
+    context.read<ItemBloc>().add(SearchItems(
+          name: searchText.isEmpty ? null : searchText,
+          latitude: position.latitude,
+          longitude: position.longitude,
+        ));
+
+    // อัปเดต UI
+    setState(() {
+      _searchController.text = searchText;
+      filteredItems.clear();
     });
   }
 
@@ -235,6 +279,7 @@ class _MainAppState extends State<MainAppScreen> {
 
     Position position = await Geolocator.getCurrentPosition();
     print("Location : ${position.latitude}, ${position.longitude}");
+
     setState(() {
       _currentPosition = LatLng(position.latitude, position.longitude);
     });
@@ -245,7 +290,7 @@ class _MainAppState extends State<MainAppScreen> {
     }
   }
 
-  void showRequestDialog(BuildContext context, MarkerData marker) {
+  void showRequestDialog(BuildContext context, ItemModel marker) {
     TextEditingController reasonController = TextEditingController();
 
     showDialog(
@@ -315,7 +360,7 @@ class _MainAppState extends State<MainAppScreen> {
     );
   }
 
-  void _showMarkerDetails(MarkerData marker) {
+  void _showMarkerDetails(ItemModel marker) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -328,7 +373,7 @@ class _MainAppState extends State<MainAppScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(20), // กำหนดมุมโค้ง 20
                 child: Image.network(
-                  marker.imagePath,
+                  "http://192.168.1.153:8080${marker.imageUrl}",
                   width: MediaQuery.of(context).size.width - 8,
                   height: 200, // ความสูง 16:9
                   fit: BoxFit.cover, // ครอบคลุมพื้นที่โดยไม่เสียอัตราส่วน
@@ -401,7 +446,9 @@ class _MainAppState extends State<MainAppScreen> {
       },
     );
   }
-  Widget _buildDialogButton(BuildContext context, String text, Color color, VoidCallback onPressed) {
+
+  Widget _buildDialogButton(
+      BuildContext context, String text, Color color, VoidCallback onPressed) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
@@ -411,7 +458,8 @@ class _MainAppState extends State<MainAppScreen> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
       ),
-      child: Text(text, style: const TextStyle(fontSize: 16, color: Colors.white)),
+      child:
+          Text(text, style: const TextStyle(fontSize: 16, color: Colors.white)),
     );
   }
 
@@ -433,7 +481,8 @@ class _MainAppState extends State<MainAppScreen> {
                 Text(
                   "คุณแน่ใจหรือไม่ว่าต้องการ ออกจากระบบ",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -441,14 +490,21 @@ class _MainAppState extends State<MainAppScreen> {
                     _buildDialogButton(context, "ยกเลิก", Colors.grey, () {
                       Navigator.of(context).pop();
                     }),
-                    _buildDialogButton(context, "ใช่", Colors.green.shade900, () {
+                    _buildDialogButton(context, "ใช่", Colors.green.shade900,
+                        () {
                       log("logout");
                       context.read<AuthBloc>().add(LogoutUser());
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (Navigator.canPop(context)) {
-                          Navigator.pushNamedAndRemoveUntil(context,     (Routes.loginAndRegister).toStringPath(), (route) => false);
+                          Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              (Routes.loginAndRegister).toStringPath(),
+                              (route) => false);
                         } else {
-                          Navigator.pushReplacementNamed(context,     (Routes.loginAndRegister).toStringPath()); // ถ้าไม่มี Route ให้ใช้ Replacement
+                          Navigator.pushReplacementNamed(
+                              context,
+                              (Routes.loginAndRegister)
+                                  .toStringPath()); // ถ้าไม่มี Route ให้ใช้ Replacement
                         }
                       });
                       Navigator.of(context).pop();
@@ -463,44 +519,93 @@ class _MainAppState extends State<MainAppScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: tapIndex == 0
-          ? buildSearhScreen(context)
-          : tapIndex == 1
-              ? buildFAVScreen(context)
-              : tapIndex == 2
-                  ? buildProfileScreen(context)
-                  : SizedBox.shrink(),
-      bottomNavigationBar: BottomNavigationBar(
-        onTap: (i) {
-          log("Tap Index: ${i}");
-          setState(() {
-            tapIndex = i;
-          });
-        },
-        currentIndex: tapIndex,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: "Search",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: "Favorite",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle),
-            label: "Account",
-          ),
-        ],
-      ),
+    return BlocConsumer<ItemBloc, ItemState>(
+      listener: (context, itemState) {
+        if (itemState is ItemNamesLoaded) {
+          allItems = itemState.itemNames;
+        }
+        // TODO: implement listener
+      },
+      builder: (context, itemState) {
+        if (itemState is ItemLoading) {
+          return Scaffold(
+            body: Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              color: Color(0xff598E0A),
+              child: Center(
+                  child: CircularProgressIndicator(
+                color: Colors.white,
+              )),
+            ),
+          );
+        } else if (itemState is ItemNamesLoaded) {
+          return Scaffold(
+            body: Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              color: Color(0xff598E0A),
+              child: Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                  )),
+            ),
+          );
+        } else if (itemState is ItemListLoaded){
+          return Scaffold(
+            body: tapIndex == 0
+                ? buildSearhScreen(context, itemState)
+                : tapIndex == 1
+                ? buildFAVScreen(context)
+                : tapIndex == 2
+                ? buildProfileScreen(context)
+                : SizedBox.shrink(),
+            bottomNavigationBar: BottomNavigationBar(
+              onTap: (i) {
+                log("Tap Index: ${i}");
+                setState(() {
+                  tapIndex = i;
+                });
+              },
+              currentIndex: tapIndex,
+              items: [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.search),
+                  label: "Search",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.favorite),
+                  label: "Favorite",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.account_circle),
+                  label: "Account",
+                ),
+              ],
+            ),
+          );
+        }else{
+          return Scaffold(
+            body: Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              color: Color(0xff598E0A),
+              child: Center(
+                  child: Icon(
+                    Icons.error_outline,
+                    color: Colors.white,
+                    size: 40,
+                  )),
+            ),
+          );
+        }
+      },
     );
   }
 
-  Stack buildSearhScreen(BuildContext context) {
+  Stack buildSearhScreen(BuildContext context, ItemListLoaded itemState) {
     return Stack(
       children: [
         FlutterMap(
@@ -516,7 +621,8 @@ class _MainAppState extends State<MainAppScreen> {
           ),
           children: [
             TileLayer(
-              urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", // ไม่มี subdomain
+              urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+              // ไม่มี subdomain
               userAgentPackageName: 'com.example.save_earth',
             ),
             if (_currentPosition != null)
@@ -532,17 +638,18 @@ class _MainAppState extends State<MainAppScreen> {
                 ],
               ),
             MarkerLayer(
-              markers: markers.map((marker) {
+              markers: itemState.items.map((marker) {
                 return Marker(
-                  point: marker.latlong,
+                  point: LatLng(marker.latitude, marker.longitude),
                   width: 50,
                   height: 50,
                   child: GestureDetector(
                     onTap: () => _showMarkerDetails(marker),
                     child: Icon(
                       Icons.location_on,
-                      color:
-                          marker.status == "active" ? Colors.green : Colors.red,
+                      color: marker.status == "available"
+                          ? Colors.green
+                          : Colors.red,
                       size: 40,
                     ),
                   ),
@@ -599,11 +706,8 @@ class _MainAppState extends State<MainAppScreen> {
                     itemBuilder: (context, index) {
                       return ListTile(
                         title: Text(filteredItems[index]),
-                        onTap: () {
-                          _searchController.text = filteredItems[index];
-                          setState(() {
-                            filteredItems.clear();
-                          });
+                        onTap: () async {
+                          _searchItem(index);
                         },
                       );
                     },
@@ -871,8 +975,7 @@ class _MainAppState extends State<MainAppScreen> {
     );
   }
 
-  Widget buildProfileScreen(BuildContext context)  {
-
+  Widget buildProfileScreen(BuildContext context) {
     return ListView(
       children: [
         Container(
@@ -905,7 +1008,11 @@ class _MainAppState extends State<MainAppScreen> {
                       radius: 48,
                       backgroundImage: _profileImage != null
                           ? FileImage(_profileImage!)
-                          : AssetImage("assets/image/profile.jpeg") as ImageProvider,
+                          : user!.profileImageUrl == null
+                              ? AssetImage("assets/image/profile.jpeg")
+                                  as ImageProvider
+                              : NetworkImage(
+                                  "http://192.168.1.153:8080${user!.profileImageUrl}"),
                     ),
                   ),
                 ),
@@ -920,9 +1027,12 @@ class _MainAppState extends State<MainAppScreen> {
                         SizedBox(
                           width: 16,
                         ),
-                         Text(
-                          "${user!.username}",
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        Text(
+                          user!.firstName == null || user!.firstName == ""
+                              ? user!.username
+                              : "${user!.firstName} ${user!.lastName}",
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -932,8 +1042,8 @@ class _MainAppState extends State<MainAppScreen> {
                         SizedBox(
                           width: 16,
                         ),
-                         Text(
-                          "${user!.email}",
+                        Text(
+                          user!.email,
                           style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
@@ -948,7 +1058,8 @@ class _MainAppState extends State<MainAppScreen> {
                         ),
                         const Text(
                           "การจัดการ",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -959,11 +1070,29 @@ class _MainAppState extends State<MainAppScreen> {
                       child: Column(
                         children: [
                           _buildMenuItem(
-                              "แก้ไขบัญชี", (Routes.editProfile).toStringPath()),
+                            "แก้ไขบัญชี",
+                            () {
+                              context
+                                  .read<AuthBloc>()
+                                  .add(GetUserById(user!.userId));
+                              Navigator.pushNamed(
+                                  context, (Routes.editProfile).toStringPath());
+                            },
+                          ),
                           _buildMenuItem(
-                              "รายการ order", (Routes.myItemList).toStringPath()),
-                          _buildMenuItem("สร้างสิ่งของของฉัน",
-                              (Routes.createMyItem).toStringPath()),
+                            "รายการ order",
+                            () {
+                              Navigator.pushNamed(
+                                  context, (Routes.myItemList).toStringPath());
+                            },
+                          ),
+                          _buildMenuItem(
+                            "สร้างสิ่งของของฉัน",
+                            () {
+                              Navigator.pushNamed(context,
+                                  (Routes.createMyItem).toStringPath());
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -994,7 +1123,7 @@ class _MainAppState extends State<MainAppScreen> {
     );
   }
 
-  Widget _buildMenuItem(String title, String stringPath) {
+  Widget _buildMenuItem(String title, VoidCallback? onTap) {
     return Card(
       elevation: 1,
       color: Colors.white,
@@ -1002,9 +1131,7 @@ class _MainAppState extends State<MainAppScreen> {
       child: ListTile(
         title: Text(title, style: const TextStyle(fontSize: 16)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {
-          Navigator.pushNamed(context, stringPath);
-        },
+        onTap: onTap,
       ),
     );
   }

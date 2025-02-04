@@ -6,7 +6,7 @@ class ApiInterceptor extends Interceptor {
   Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     final token = await LocalStorageHelper.getToken();
     options.headers.addAll({
-      "Content-Type": "application/json",
+      // "Content-Type": "application/json",
       "Authorization": "Bearer $token", // เปลี่ยนเป็น token จริง
     });
 

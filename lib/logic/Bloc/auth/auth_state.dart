@@ -19,3 +19,12 @@ class AuthFailure extends AuthState {
   AuthFailure(this.error);
 }
 
+class UserFetched extends AuthState {
+  final UserModel user;
+  UserFetched(this.user);
+}
+
+class ProfileUpdateSuccess extends AuthState {
+  final String message;
+  ProfileUpdateSuccess(this.message);
+}

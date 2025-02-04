@@ -15,6 +15,7 @@ import 'package:save_earth/firebase_options.dart';
 import 'package:save_earth/logic/Bloc/bloc.dart';
 import 'package:save_earth/presentation/screens/auth/login_register_screen.dart';
 import 'package:save_earth/repositores/auth_repository.dart';
+import 'package:save_earth/repositores/item_repository.dart';
 import 'package:save_earth/route/map_routing.dart';
 import 'package:save_earth/service/api_service.dart';
 
@@ -25,14 +26,16 @@ Future<void> main() async {
   );
   final apiService = ApiService();
   final authRepository = AuthRepository(apiService);
+  final itemRepository = ItemRepository(apiService);
 
-  runApp(EvApp(authRepository: authRepository));
+  runApp(EvApp(authRepository: authRepository,itemRepository:itemRepository));
 }
 
 class EvApp extends StatelessWidget {
   final AuthRepository authRepository;
+  final ItemRepository itemRepository;
 
-  EvApp({super.key, required this.authRepository});
+  EvApp({super.key, required this.authRepository, required this.itemRepository});
 
   final _routes = evShopRoutes;
 
@@ -49,12 +52,9 @@ class EvApp extends StatelessWidget {
     try {
       const setEnv = String.fromEnvironment('SET_ENV', defaultValue: 'dev');
       String? env = setEnv;
-      bool isForE2E = false;
-      if (isForE2E) {
-        env = 'mock';
-      } else {
+
         env = await rootBundle.loadString('env-local');
-      }
+
       env = env.trim().replaceAll('\n', '');
       await dotenv.load(fileName: 'env/$env');
       DataStore().setEnv(dotenv.env);
@@ -86,7 +86,7 @@ class EvApp extends StatelessWidget {
             String initialRoute = snapshot.data![1] as String; // ดึงค่าจาก `_checkUserSession()`
 
             return MultiBlocProvider(
-              providers: BlocList(authRepository).blocs,
+              providers: BlocList(authRepository,itemRepository).blocs,
               child: MaterialApp(
                 title: 'save earth',
                 theme: ThemeData(

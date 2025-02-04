@@ -42,7 +42,7 @@ class _LoginAndRegisterState extends State<LoginAndRegisterPage> {
     if (authState is AuthSuccess) {
       if(authState.message == "User registered successfully"){
         _login();
-      }else if(authState.message == "Login successful"){
+      }else if(authState.message == "Login successful" ||authState.message ==  "Google Login successful"){
         Navigator.pushReplacementNamed(context, Routes.mainApp.toStringPath());
       }
 

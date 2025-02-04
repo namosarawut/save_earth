@@ -22,5 +22,27 @@ class LoginWithGoogle extends AuthEvent {
   LoginWithGoogle(this.uid, this.email);
 }
 
+class GetUserById extends AuthEvent {
+  final int userId;
+
+  GetUserById(this.userId);
+}
+
+class UpdateUserProfile extends AuthEvent {
+  final int userId;
+  final String firstName;
+  final String lastName;
+  final String phoneNumber;
+  final File? profileImage;
+
+  UpdateUserProfile({
+    required this.userId,
+    required this.firstName,
+    required this.lastName,
+    required this.phoneNumber,
+    this.profileImage,
+  });
+}
 
 class LogoutUser extends AuthEvent {}
+
