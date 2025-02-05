@@ -22,21 +22,10 @@ class ItemBloc extends Bloc<ItemEvent, ItemState> {
       }
     });
 
-    on<SearchItems>((event, emit) async {
-      emit(ItemLoading());
-      try {
-        final items = await repository.searchItems(
-          name: event.name,
-          latitude: event.latitude,
-          longitude: event.longitude,
-        );
-        emit(ItemListLoaded(items));
-      } catch (e) {
-        emit(ItemError("Failed to search items"));
-      }
-    });
+
 
 
   }
+
 
 }

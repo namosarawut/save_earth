@@ -13,9 +13,8 @@ import 'package:save_earth/data/model/item_model.dart';
 import 'package:save_earth/data/model/user_model.dart';
 import 'package:save_earth/logic/Bloc/auth/auth_bloc.dart';
 import 'package:save_earth/logic/Bloc/item/item_bloc.dart';
+import 'package:save_earth/logic/Bloc/search_data/searh_data_bloc.dart';
 import 'package:save_earth/route/convert_route.dart';
-
-
 
 class MainAppScreen extends StatefulWidget {
   const MainAppScreen({super.key});
@@ -31,6 +30,15 @@ class _MainAppState extends State<MainAppScreen> {
   final MapController _mapController = MapController();
   double _currentZoom = 13.0;
   List<String>? allItems;
+  final List<String> categories = [
+    "เฟอร์นิเจอร์",
+    "เครื่องใช้ไฟฟ้า",
+    "เสื้อผ้า",
+    "หนังสือ",
+    "ของใช้ในบ้าน",
+    "ของเล่น",
+    "ของใช้ส่วนตัว"
+  ];
   final List<Map<String, dynamic>> myFavoriteList = [
     {
       "favorite_id": 501,
@@ -112,32 +120,35 @@ class _MainAppState extends State<MainAppScreen> {
   File? _profileImage;
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       print("🔍 Selected File: ${pickedFile.path}");
       String? mimeType = lookupMimeType(pickedFile.path); // ตรวจสอบ MIME type
       print("📌 MIME Type: $mimeType");
 
-      if (mimeType == "image/jpeg" || mimeType == "image/png" || mimeType == "image/jpg") {
+      if (mimeType == "image/jpeg" ||
+          mimeType == "image/png" ||
+          mimeType == "image/jpg") {
         final user = await LocalStorageHelper.getUser(); // โหลดข้อมูล user
 
         if (user == null) {
           print("⚠️ User is null. Cannot update profile.");
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("⚠️ ไม่สามารถอัพเดทโปรไฟล์ได้ กรุณาลองใหม่"))
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text("⚠️ ไม่สามารถอัพเดทโปรไฟล์ได้ กรุณาลองใหม่")));
           return;
         }
 
         // อัปเดตโปรไฟล์ผ่าน Bloc
         context.read<AuthBloc>().add(UpdateUserProfile(
-          userId: user.userId,
-          firstName: user.firstName?.isEmpty ?? true ? "" : user.firstName!,
-          lastName: user.lastName?.isEmpty ?? true ? "" : user.lastName!,
-          phoneNumber: user.phoneNumber?.isEmpty ?? true ? "" : user.phoneNumber!,
-          profileImage: File(pickedFile.path),
-        ));
+              userId: user.userId,
+              firstName: user.firstName?.isEmpty ?? true ? "" : user.firstName!,
+              lastName: user.lastName?.isEmpty ?? true ? "" : user.lastName!,
+              phoneNumber:
+                  user.phoneNumber?.isEmpty ?? true ? "" : user.phoneNumber!,
+              profileImage: File(pickedFile.path),
+            ));
 
         // อัปเดต UI
         setState(() {
@@ -145,17 +156,13 @@ class _MainAppState extends State<MainAppScreen> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("✅ อัพเดทรูปโปรไฟล์เรียบร้อย"))
-        );
-
+            SnackBar(content: Text("✅ อัพเดทรูปโปรไฟล์เรียบร้อย")));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("⚠️ โปรดเลือกไฟล์ JPEG หรือ PNG เท่านั้น"))
-        );
+            SnackBar(content: Text("⚠️ โปรดเลือกไฟล์ JPEG หรือ PNG เท่านั้น")));
       }
     }
   }
-
 
   UserModel? user;
 
@@ -167,6 +174,7 @@ class _MainAppState extends State<MainAppScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         context.read<ItemBloc>().add(LoadUniqueItemNames());
+
 
         bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (!serviceEnabled) {
@@ -192,11 +200,10 @@ class _MainAppState extends State<MainAppScreen> {
         // ✅ ตรวจสอบว่า Widget ยังอยู่ใน Tree ก่อนเรียกใช้ context
         if (!mounted) return;
 
-        context.read<ItemBloc>().add(SearchItems(
-          latitude: position.latitude,
-          longitude: position.longitude,
-        ));
-
+        context.read<SearchDataBloc>().add(SearchItems(
+              latitude: position.latitude,
+              longitude: position.longitude,
+            ));
       } catch (e) {
         if (!mounted) return;
         print("🚨 Error getting location: $e");
@@ -206,8 +213,6 @@ class _MainAppState extends State<MainAppScreen> {
       }
     });
   }
-
-
 
   @override
   void initState() {
@@ -247,7 +252,7 @@ class _MainAppState extends State<MainAppScreen> {
     }
 
     // ส่ง event ไปที่ Bloc
-    context.read<ItemBloc>().add(SearchItems(
+    context.read<SearchDataBloc>().add(SearchItems(
           name: searchText.isEmpty ? null : searchText,
           latitude: position.latitude,
           longitude: position.longitude,
@@ -373,7 +378,7 @@ class _MainAppState extends State<MainAppScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(20), // กำหนดมุมโค้ง 20
                 child: Image.network(
-                  "http://192.168.1.153:8080${marker.imageUrl}",
+                  "http://172.20.10.2:8080${marker.imageUrl}",
                   width: MediaQuery.of(context).size.width - 8,
                   height: 200, // ความสูง 16:9
                   fit: BoxFit.cover, // ครอบคลุมพื้นที่โดยไม่เสียอัตราส่วน
@@ -383,7 +388,11 @@ class _MainAppState extends State<MainAppScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Text(marker.name,
+                  Text(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
+                      marker.name,
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
@@ -391,21 +400,28 @@ class _MainAppState extends State<MainAppScreen> {
               SizedBox(height: 5),
               Container(
                 decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Color(0xffD9D9D9)),
+                  borderRadius: BorderRadius.circular(8),
+                  color: Color(0xffD9D9D9),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      Text(
-                        marker.description,
-                        style: TextStyle(fontSize: 16),
-                      )
+                      Expanded(
+                        // ✅ ใช้ Expanded เพื่อให้ Text ขยายเต็มที่
+                        child: Text(
+                          marker.description,
+                          softWrap: true,
+                          // ✅ อนุญาตให้ข้อความเว้นบรรทัดอัตโนมัติ
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
+
               // Text(marker.description),
               SizedBox(height: 10),
               Row(
@@ -542,51 +558,82 @@ class _MainAppState extends State<MainAppScreen> {
             ),
           );
         } else if (itemState is ItemNamesLoaded) {
-          return Scaffold(
-            body: Container(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              color: Color(0xff598E0A),
-              child: Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                  )),
-            ),
+          return BlocConsumer<SearchDataBloc, SearchDataState>(
+            listener: (context, searchDataState) {
+              if (searchDataState is SearchItemListLoaded) {
+                if (searchDataState.items.isNotEmpty) {
+                    _mapController.move(
+                        LatLng(searchDataState.items[0].latitude,
+                            searchDataState.items[0].longitude),
+                        _currentZoom);
+
+                }
+              }
+            },
+            builder: (context, searchDataState) {
+              if (searchDataState is SearchItemError) {
+                return Scaffold(
+                  body: Container(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                    color: Color(0xff598E0A),
+                    child: Center(
+                        child: Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                      size: 40,
+                    )),
+                  ),
+                );
+              } else if (searchDataState is SearchItemListLoaded) {
+                return Scaffold(
+                  body: tapIndex == 0
+                      ? buildSearhScreen(context, searchDataState)
+                      : tapIndex == 1
+                          ? buildFAVScreen(context)
+                          : tapIndex == 2
+                              ? buildProfileScreen(context)
+                              : SizedBox.shrink(),
+                  bottomNavigationBar: BottomNavigationBar(
+                    onTap: (i) {
+                      log("Tap Index: ${i}");
+                      setState(() {
+                        tapIndex = i;
+                      });
+                    },
+                    currentIndex: tapIndex,
+                    items: [
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.search),
+                        label: "Search",
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.favorite),
+                        label: "Favorite",
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.account_circle),
+                        label: "Account",
+                      ),
+                    ],
+                  ),
+                );
+              } else {
+                return Scaffold(
+                  body: Container(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                    color: Color(0xff598E0A),
+                    child: Center(
+                        child: CircularProgressIndicator(
+                      color: Colors.white,
+                    )),
+                  ),
+                );
+              }
+            },
           );
-        } else if (itemState is ItemListLoaded){
-          return Scaffold(
-            body: tapIndex == 0
-                ? buildSearhScreen(context, itemState)
-                : tapIndex == 1
-                ? buildFAVScreen(context)
-                : tapIndex == 2
-                ? buildProfileScreen(context)
-                : SizedBox.shrink(),
-            bottomNavigationBar: BottomNavigationBar(
-              onTap: (i) {
-                log("Tap Index: ${i}");
-                setState(() {
-                  tapIndex = i;
-                });
-              },
-              currentIndex: tapIndex,
-              items: [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.search),
-                  label: "Search",
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.favorite),
-                  label: "Favorite",
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.account_circle),
-                  label: "Account",
-                ),
-              ],
-            ),
-          );
-        }else{
+        } else {
           return Scaffold(
             body: Container(
               width: MediaQuery.of(context).size.width,
@@ -594,10 +641,10 @@ class _MainAppState extends State<MainAppScreen> {
               color: Color(0xff598E0A),
               child: Center(
                   child: Icon(
-                    Icons.error_outline,
-                    color: Colors.white,
-                    size: 40,
-                  )),
+                Icons.error_outline,
+                color: Colors.white,
+                size: 40,
+              )),
             ),
           );
         }
@@ -605,7 +652,8 @@ class _MainAppState extends State<MainAppScreen> {
     );
   }
 
-  Stack buildSearhScreen(BuildContext context, ItemListLoaded itemState) {
+  Stack buildSearhScreen(
+      BuildContext context, SearchItemListLoaded searchDataState) {
     return Stack(
       children: [
         FlutterMap(
@@ -638,7 +686,7 @@ class _MainAppState extends State<MainAppScreen> {
                 ],
               ),
             MarkerLayer(
-              markers: itemState.items.map((marker) {
+              markers: searchDataState.items.map((marker) {
                 return Marker(
                   point: LatLng(marker.latitude, marker.longitude),
                   width: 50,
@@ -662,29 +710,68 @@ class _MainAppState extends State<MainAppScreen> {
           top: 40,
           left: 24,
           right: 24,
-          child: Container(
-            height: 45,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                  offset: Offset(0, 4),
+          child: Column(
+            children: [
+              Container(
+                height: 45,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: "Search for what you want",
-                prefixIcon: Icon(Icons.search, color: Colors.black54),
-                border: InputBorder.none,
-                // contentPadding: EdgeInsets.symmetric(vertical: 20),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: "Search for what you want",
+                    prefixIcon: Icon(Icons.search, color: Colors.black54),
+                    border: InputBorder.none,
+                    // contentPadding: EdgeInsets.symmetric(vertical: 20),
+                  ),
+                ),
               ),
-            ),
+              SizedBox(
+                height: 8,
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: categories.map((category) {
+                  return GestureDetector(
+                    // onTap: () => _onCategorySelected(category),
+                    onTap: () async {
+                      Position position = await Geolocator.getCurrentPosition();
+                      log("position : ${position.latitude.toString()}");
+                      context
+                          .read<SearchDataBloc>()
+                          .add(GetItemsByCategory(category: category,latitude: position.latitude.toString(),longitude:position.longitude.toString() ));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      child: Text(
+                        category,
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
           ),
         ),
         Positioned(
@@ -1012,7 +1099,7 @@ class _MainAppState extends State<MainAppScreen> {
                               ? AssetImage("assets/image/profile.jpeg")
                                   as ImageProvider
                               : NetworkImage(
-                                  "http://192.168.1.153:8080${user!.profileImageUrl}"),
+                                  "http://172.20.10.2:8080${user!.profileImageUrl}"),
                     ),
                   ),
                 ),
@@ -1080,7 +1167,7 @@ class _MainAppState extends State<MainAppScreen> {
                             },
                           ),
                           _buildMenuItem(
-                            "รายการ order",
+                            "รายการ สิ่งของ",
                             () {
                               Navigator.pushNamed(
                                   context, (Routes.myItemList).toStringPath());

@@ -17,9 +17,6 @@ class ItemError extends ItemState {
 }
 
 
-class ItemListLoaded extends ItemState {
-  final List<ItemModel> items;
-  ItemListLoaded(this.items);
-}
+
 
 

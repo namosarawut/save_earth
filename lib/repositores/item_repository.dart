@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
 import 'package:save_earth/data/model/item_model.dart';
+import 'package:save_earth/data/model/my_item_list_model.dart';
 import 'package:save_earth/service/api_service.dart';
 
 
@@ -78,6 +79,49 @@ class ItemRepository {
       throw Exception("Server Error: ${e.response?.data["message"] ?? "Unknown error"}");
     }
   }
+
+  Future<List<ItemListModel>> getItemsByUserId(int userId) async {
+    try {
+      final response = await apiService.get("/items/user/$userId");
+      List<ItemListModel> items = (response.data as List).map((json) => ItemListModel.fromJson(json)).toList();
+      return items;
+    } catch (e) {
+      throw Exception("Failed to fetch items");
+    }
+  }
+
+  Future<String> deleteItemById(int itemId) async {
+    try {
+      final response = await apiService.delete("/items/$itemId");
+      return response.data["message"];
+    } catch (e) {
+      throw Exception("Failed to delete item");
+    }
+  }
+
+  Future<List<ItemModel>> getItemsByCategory({
+    required String category,
+    required String latitude,
+    required String longitude,
+  }) async {
+    try {
+      Map<String, dynamic> queryParams = {
+        "category": category,
+        "latitude": latitude,
+        "longitude": longitude,
+      };
+      final response = await apiService.get(
+        "/items/search/category",  query:queryParams
+      );
+
+      return (response.data["items"] as List)
+          .map((json) => ItemModel.fromJson(json))
+          .toList();
+    } catch (e) {
+      throw Exception("Failed to fetch items by category");
+    }
+  }
+
 }
 
 
