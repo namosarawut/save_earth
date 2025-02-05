@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
+import 'package:save_earth/data/model/favorite_model.dart';
 import 'package:save_earth/data/model/item_model.dart';
 import 'package:save_earth/data/model/my_item_list_model.dart';
 import 'package:save_earth/service/api_service.dart';
@@ -119,6 +120,51 @@ class ItemRepository {
           .toList();
     } catch (e) {
       throw Exception("Failed to fetch items by category");
+    }
+  }
+
+  Future<String> addFavorite({
+    required int userId,
+    required int itemId,
+  }) async {
+    try {
+      final response = await apiService.post(
+        "/items/favorites",
+        data: {
+          "user_id": userId,
+          "item_id": itemId,
+        },
+      );
+      return response.data["message"];
+    } catch (e) {
+      throw Exception("Failed to add item to favorites");
+    }
+  }
+
+  Future<List<FavoriteModel>> getFavoritesByUserId(int userId) async {
+    try {
+      final response = await apiService.get("/items/favorites/$userId");
+      return (response.data as List).map((json) => FavoriteModel.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception("Failed to fetch favorites");
+    }
+  }
+
+  Future<String> deleteFavorite({
+    required int userId,
+    required int itemId,
+  }) async {
+    try {
+      final response = await apiService.delete(
+        "/items/favorites/delete",
+        data: {
+          "user_id": userId,
+          "item_id": itemId,
+        },
+      );
+      return response.data["message"];
+    } catch (e) {
+      throw Exception("Failed to remove item from favorites");
     }
   }
 

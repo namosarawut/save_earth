@@ -1,9 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:save_earth/logic/Bloc/add_favorite/add_favorite_bloc.dart';
 import 'package:save_earth/logic/Bloc/approve_request/approve_request_bloc.dart';
 import 'package:save_earth/logic/Bloc/create_item/create_item_event_bloc.dart';
 import 'package:save_earth/logic/Bloc/create_request/create_request_bloc.dart';
+import 'package:save_earth/logic/Bloc/delete_favorite/delete_favorite_bloc.dart';
 import 'package:save_earth/logic/Bloc/delete_my_item/delete_my_item_bloc.dart';
 import 'package:save_earth/logic/Bloc/delete_my_request/delete_my_request_bloc.dart';
+import 'package:save_earth/logic/Bloc/get_favorites/get_favorites_bloc.dart';
 import 'package:save_earth/logic/Bloc/get_my_item_list/get_my_item_list_bloc.dart';
 import 'package:save_earth/logic/Bloc/get_my_requests/get_my_requests_bloc.dart';
 import 'package:save_earth/logic/Bloc/google_auth/google_auth_bloc.dart';
@@ -39,6 +42,9 @@ class BlocList {
       BlocProvider<GetMyRequestsBloc>(create: (_) => GetMyRequestsBloc(requestRepository)),
       BlocProvider<DeleteMyRequestBloc>(create: (_) => DeleteMyRequestBloc(requestRepository)),
       BlocProvider<ApproveRequestBloc>(create: (_) => ApproveRequestBloc(requestRepository)),
+      BlocProvider<AddFavoriteBloc>(create: (_) => AddFavoriteBloc(itemRepository)),
+      BlocProvider<GetFavoritesBloc>(create: (_) => GetFavoritesBloc(itemRepository)),
+      BlocProvider<DeleteFavoriteBloc>(create: (_) => DeleteFavoriteBloc(itemRepository)),
     ];
   }
 }

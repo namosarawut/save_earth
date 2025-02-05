@@ -9,10 +9,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mime/mime.dart';
 import 'package:save_earth/data/local_storage_helper.dart';
+import 'package:save_earth/data/model/favorite_model.dart';
 import 'package:save_earth/data/model/item_model.dart';
 import 'package:save_earth/data/model/user_model.dart';
+import 'package:save_earth/logic/Bloc/add_favorite/add_favorite_bloc.dart';
 import 'package:save_earth/logic/Bloc/auth/auth_bloc.dart';
 import 'package:save_earth/logic/Bloc/create_request/create_request_bloc.dart';
+import 'package:save_earth/logic/Bloc/delete_favorite/delete_favorite_bloc.dart';
+import 'package:save_earth/logic/Bloc/get_favorites/get_favorites_bloc.dart';
 import 'package:save_earth/logic/Bloc/item/item_bloc.dart';
 import 'package:save_earth/logic/Bloc/search_data/searh_data_bloc.dart';
 import 'package:save_earth/route/convert_route.dart';
@@ -41,83 +45,7 @@ class _MainAppState extends State<MainAppScreen> {
     "ของเล่น",
     "ของใช้ส่วนตัว"
   ];
-  final List<Map<String, dynamic>> myFavoriteList = [
-    {
-      "favorite_id": 501,
-      "item": {
-        "item_id": 77,
-        "name": "ตู้เย็นเก่า",
-        "image_url":
-            "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
-        "category": "เครื่องใช้ไฟฟ้า",
-        "description": "ตู้เย็นยังใช้งานได้แต่มีรอยขีดข่วนเล็กน้อย",
-        "latitude": 13.7563,
-        "longitude": 100.5018,
-        "status": "available",
-        "created_at": "2025-01-29T08:30:00Z",
-        "posted_by": {
-          "user_id": 301,
-          "username": "jane_doe",
-          "contact": {
-            "first_name": "Jane",
-            "last_name": "Doe",
-            "phone_number": "+66987654321"
-          }
-        }
-      },
-      "added_at": "2025-02-01T10:15:00Z"
-    },
-    {
-      "favorite_id": 502,
-      "item": {
-        "item_id": 88,
-        "name": "โต๊ะไม้เก่า",
-        "image_url":
-            "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
-        "category": "เฟอร์นิเจอร์",
-        "description": "โต๊ะไม้เก่าสภาพดี ไม่ได้ใช้แล้ว",
-        "latitude": 13.7363,
-        "longitude": 100.5238,
-        "status": "available",
-        "created_at": "2025-01-30T09:15:00Z",
-        "posted_by": {
-          "user_id": 302,
-          "username": "alice_wonder",
-          "contact": {
-            "first_name": "Alice",
-            "last_name": "Wonderland",
-            "phone_number": "+66678901234"
-          }
-        }
-      },
-      "added_at": "2025-02-01T11:20:00Z"
-    },
-    {
-      "favorite_id": 503,
-      "item": {
-        "item_id": 99,
-        "name": "ตุ๊กตาหมี",
-        "image_url":
-            "https://c.pxhere.com/photos/03/7e/toys_teddy_bear_plush_bear_plush_old_bear-778203.jpg!d",
-        "category": "ของใช้ส่วนตัว",
-        "description": "ตุ๊กตาหมีนุ่มนิ่ม สภาพดี",
-        "latitude": 13.7451,
-        "longitude": 100.5392,
-        "status": "taken",
-        "created_at": "2025-01-28T14:45:00Z",
-        "posted_by": {
-          "user_id": 303,
-          "username": "bob_marley",
-          "contact": {
-            "first_name": "Bob",
-            "last_name": "Marley",
-            "phone_number": "+66543210987"
-          }
-        }
-      },
-      "added_at": "2025-02-01T12:00:00Z"
-    }
-  ];
+
   List<String> filteredItems = [];
   File? _profileImage;
 
@@ -176,7 +104,7 @@ class _MainAppState extends State<MainAppScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         context.read<ItemBloc>().add(LoadUniqueItemNames());
-
+        _fetchFavorites();
         bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (!serviceEnabled) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -215,11 +143,18 @@ class _MainAppState extends State<MainAppScreen> {
     });
   }
 
+  void _fetchFavorites() async {
+    final user = await LocalStorageHelper.getUser();
+    if (user != null) {
+      context.read<GetFavoritesBloc>().add(FetchFavoritesByUserId(user.userId));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    initApp();
     getUserData();
+    initApp();
     _getCurrentLocation();
     _searchController.addListener(() {
       filterSearchResults();
@@ -298,12 +233,9 @@ class _MainAppState extends State<MainAppScreen> {
         }
       }
     });
-
   }
 
   void showRequestDialog(BuildContext context, ItemModel marker) {
-
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -349,8 +281,7 @@ class _MainAppState extends State<MainAppScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    _submitRequest(marker);
-
+                    _submitRequest(marker,context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[800], // สีเขียวเข้ม
@@ -373,114 +304,301 @@ class _MainAppState extends State<MainAppScreen> {
   }
 
   void _showMarkerDetails(ItemModel marker) {
+    bool isFavorite = false;
+    bool isItemFavorite(List<FavoriteModel> favdata, int inputId) {
+      return favdata.any((favorite) => favorite.item.itemId == inputId);
+    }
+
+    void removeFavorite(int itemId) async {
+      final user = await LocalStorageHelper.getUser();
+      if (user != null) {
+        context
+            .read<DeleteFavoriteBloc>()
+            .add(DeleteFavoriteItem(userId: user.userId, itemId: itemId));
+      } else {
+        setState(() {
+          isFavorite = true;
+        });
+      }
+    }
+
+    void addFavorite(int itemId) async {
+      final user = await LocalStorageHelper.getUser();
+      if (user != null) {
+        context.read<AddFavoriteBloc>().add(
+              AddFavoriteItem(userId: user.userId, itemId: itemId),
+            );
+      } else {
+        setState(() {
+          isFavorite = false;
+        });
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
-        return Container(
-          width: MediaQuery.of(context).size.width - 16,
-          padding: EdgeInsets.all(16.0),
-          child: ListView(
-            // mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20), // กำหนดมุมโค้ง 20
-                child: Image.network(
-                  "http://192.168.1.157:8080${marker.imageUrl}",
-                  width: MediaQuery.of(context).size.width - 8,
-                  height: 200, // ความสูง 16:9
-                  fit: BoxFit.cover, // ครอบคลุมพื้นที่โดยไม่เสียอัตราส่วน
-                ),
-              ),
-              SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: true,
-                      marker.name,
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              SizedBox(height: 5),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: Color(0xffD9D9D9),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        // ✅ ใช้ Expanded เพื่อให้ Text ขยายเต็มที่
-                        child: Text(
-                          marker.description,
-                          softWrap: true,
-                          // ✅ อนุญาตให้ข้อความเว้นบรรทัดอัตโนมัติ
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+        return BlocConsumer<GetFavoritesBloc, GetFavoritesState>(
+          listener: (context, getFavoritesState) {
+            if (getFavoritesState is GetFavoritesLoaded) {
+              print("FavData : ${getFavoritesState.favorites[0].item.itemId}");
+              if (isItemFavorite(getFavoritesState.favorites, marker.itemId)) {
+                setState(() {
+                  isFavorite = true;
+                });
+              } else {
+                setState(() {
+                  isFavorite = false;
+                });
+              }
+            }
+          },
+          builder: (context, state) {
+            return BlocConsumer<AddFavoriteBloc, AddFavoriteState>(
+              listener: (context, addFavoriteState) {
+                if (addFavoriteState is AddFavoriteSuccess) {
+                  setState(() {
+                    isFavorite = true;
+                  });
+                } else if (addFavoriteState is AddFavoriteError) {
+                  setState(() {
+                    isFavorite = false;
+                  });
+                }
+                // TODO: implement listener
+              },
+              builder: (context, addFavoriteState) {
+                return BlocConsumer<DeleteFavoriteBloc, DeleteFavoriteState>(
+                  listener: (context, deleteFavoriteState) {
+                    // TODO: implement listener
+                    if (deleteFavoriteState is DeleteFavoriteSuccess) {
+                      setState(() {
+                        isFavorite = false;
+                      });
+                    } else if (deleteFavoriteState is DeleteFavoriteError) {
+                      setState(() {
+                        isFavorite = true;
+                      });
+                    }
+                  },
+                  builder: (context, deleteFavoriteState) {
+                    return StatefulBuilder(
+                      builder: (BuildContext context, StateSetter setState) {
+                        return Container(
+                          width: MediaQuery.of(context).size.width - 16,
+                          padding: EdgeInsets.all(16.0),
+                          child: ListView(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Image.network(
+                                  "http://192.168.1.157:8080${marker.imageUrl}",
+                                  width: MediaQuery.of(context).size.width - 8,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    marker.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 5),
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: Color(0xffD9D9D9),
+                                ),
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  marker.description,
+                                  softWrap: true,
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "หมวดหมู่: ${marker.category}",
+                                    style: TextStyle(fontSize: 16),
+                                  )
+                                ],
+                              ),
+                              SizedBox(height: 10),
+                              Text("ลงประกาศเมื่อ: ${marker.createdAt}"),
+                              SizedBox(height: 40),
 
-              // Text(marker.description),
-              SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    "หมวดหมู่: ${marker.category}",
-                    style: TextStyle(fontSize: 16),
-                  )
-                ],
-              ),
-              SizedBox(height: 10),
-              Text("ลงประกาศเมื่อ: ${marker.createdAt}"),
-              SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () {
-                  // Navigator.pushNamed(context, (Routes.mainApp).toStringPath());
-                  showRequestDialog(context, marker);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade900,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 80,
-                  ),
+                              // ✅ ปุ่ม Favorite และปุ่มส่งคำขอ
+                              Row(
+                                children: [
+                                  // ✅ ปุ่ม "ส่งคำขอ"
+                                  Expanded(
+                                    flex: 3, // 75% ของปุ่มส่งคำขอ
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        showRequestDialog(context, marker);
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green.shade900,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
+                                      ),
+                                      child: const Text(
+                                        "ส่งคำขอ",
+                                        style: TextStyle(
+                                            fontSize: 16, color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  // ✅ ปุ่ม "เพิ่มในรายการโปรด"
+                                  Expanded(
+                                    flex: 1, // 25% ของปุ่มส่งคำขอ
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        if (isFavorite) {
+                                          removeFavorite(marker.itemId);
+                                        } else {
+                                          addFavorite(marker.itemId);
+                                        }
+                                        setState(() {
+                                          isFavorite = !isFavorite;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isFavorite
+                                            ? Colors.green.shade900
+                                            : Colors.green.shade300,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
+                                      ),
+                                      child: Icon(
+                                        isFavorite
+                                            ? Icons.favorite
+                                            : Icons.favorite_border,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+  void _showWarningTOUpdateProfileDialog(BuildContext context, String fagType) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: 400,
+            height: 145,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "กรุณาอัพเดทข้อมูลส่วนตัวของคุณก่อนทำรายการ?",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                child: Text(
-                  "ส่งคำขอ",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildDialogButton(context, "ปิด", Colors.grey, () {
+                      if(fagType == "create"){
+                        Navigator.of(context).pop();
+                      }else{
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                      }
+
+                    }),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  void _submitRequest(ItemModel marker) async {
+  void _submitRequest(ItemModel marker, BuildContext context) async {
+    final user = await LocalStorageHelper.getUser();
     if (user != null) {
-      Navigator.pop(context);
+      if(user.firstName != null) {
+        Navigator.pop(context);
+        context.read<CreateRequestBloc>().add(
+          SubmitRequest(
+            itemId: marker.itemId,
+            userId: user.userId,
+            reason: reasonController.text,
+          ),
+        );
+      }else{
+        reasonController.clear();
+        _showWarningTOUpdateProfileDialog(context,"request");
+      }
+    }
+  }
 
-      context.read<CreateRequestBloc>().add(
-        SubmitRequest(
-          itemId: marker.itemId,
-          userId: user!.userId,
-          reason: reasonController.text,
-        ),
-      );
+  int? itemIdCash;
+
+  void _submitRequestOnFav(FavoriteModel requestListItem) async {
+    final user = await LocalStorageHelper.getUser();
+    if (user != null) {
+      if(user.firstName != null) {
+        setState(() {
+          itemIdCash = requestListItem.item.itemId;
+        });
+        context.read<CreateRequestBloc>().add(
+          SubmitRequest(
+            itemId: requestListItem.item.itemId,
+            userId: user.userId,
+            reason: reasonController.text,
+          ),
+        );
+        reasonController.clear();
+        Navigator.pop(context);
+        Navigator.pop(context);
+      }else{
+        reasonController.clear();
+        _showWarningTOUpdateProfileDialog(context,"request");
+      }
     }
   }
 
@@ -555,9 +673,9 @@ class _MainAppState extends State<MainAppScreen> {
       },
     );
   }
+
   void showRequestDialogOnFav(
-      BuildContext context, Map<String, dynamic> requestListItem) {
-    TextEditingController reasonController = TextEditingController();
+      BuildContext context, FavoriteModel requestListItem) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -603,7 +721,7 @@ class _MainAppState extends State<MainAppScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context); // ปิด Dialog
+                    _submitRequestOnFav(requestListItem);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[800], // สีเขียวเข้ม
@@ -624,7 +742,8 @@ class _MainAppState extends State<MainAppScreen> {
       },
     );
   }
-  void showItemDetailsOnFav(Map<String, dynamic> requestListItem) {
+
+  void showItemDetailsOnFav(FavoriteModel requestListItem) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -632,84 +751,88 @@ class _MainAppState extends State<MainAppScreen> {
           width: MediaQuery.of(context).size.width - 16,
           padding: EdgeInsets.all(16.0),
           child: ListView(
-            // mainAxisSize: MainAxisSize.min,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(20), // กำหนดมุมโค้ง 20
+                borderRadius: BorderRadius.circular(20),
                 child: Image.network(
-                  requestListItem['item']['image_url'],
+                  "http://192.168.1.157:8080${requestListItem.item.imageUrl}",
                   width: MediaQuery.of(context).size.width - 8,
-                  height: 200, // ความสูง 16:9
-                  fit: BoxFit.cover, // ครอบคลุมพื้นที่โดยไม่เสียอัตราส่วน
+                  height: 200,
+                  fit: BoxFit.cover,
                 ),
               ),
-              SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(requestListItem['item']['name'],
-                      style:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              SizedBox(height: 5),
-              Container(
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Color(0xffD9D9D9)),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text(
-                        requestListItem['item']['description'],
-                        style: TextStyle(fontSize: 16),
-                      )
-                    ],
-                  ),
-                ),
-              ),
-              // Text(marker.description),
               SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Text(
-                    "หมวดหมู่: ${requestListItem['item']['category']}",
+                    requestListItem.item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              SizedBox(height: 5),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Color(0xffD9D9D9),
+                ),
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  requestListItem.item.description,
+                  softWrap: true,
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text(
+                    "หมวดหมู่: ${requestListItem.item.category}",
                     style: TextStyle(fontSize: 16),
                   )
                 ],
               ),
               SizedBox(height: 10),
-              Text("ลงประกาศเมื่อ: ${requestListItem['item']['created_at']}"),
+              Text("ลงประกาศเมื่อ: ${requestListItem.item.createdAt}"),
               SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () {
-                  // Navigator.pushNamed(context, (Routes.mainApp).toStringPath());
-                  showRequestDialogOnFav(context, requestListItem);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade900,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+
+              // ✅ ปุ่ม Favorite และปุ่มส่งคำขอ
+              Row(
+                children: [
+                  // ✅ ปุ่ม "ส่งคำขอ"
+                  Expanded(
+                    flex: 1, // 75% ของปุ่มส่งคำขอ
+                    child: ElevatedButton(
+                      onPressed: () {
+                        showRequestDialogOnFav(context, requestListItem);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade900,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text(
+                        "ส่งคำขอ",
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 80,
-                  ),
-                ),
-                child: Text(
-                  "ส่งคำขอ",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
+                ],
               ),
             ],
           ),
         );
+        ;
       },
     );
   }
+
   Widget _buildMenuItem(String title, VoidCallback? onTap) {
     return Card(
       elevation: 1,
@@ -722,7 +845,6 @@ class _MainAppState extends State<MainAppScreen> {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -759,9 +881,6 @@ class _MainAppState extends State<MainAppScreen> {
                           _currentZoom);
                     }
                   });
-
-
-
                 }
               }
             },
@@ -792,11 +911,15 @@ class _MainAppState extends State<MainAppScreen> {
                   bottomNavigationBar: BottomNavigationBar(
                     onTap: (i) {
                       log("Tap Index: ${i}");
+                      if(i==1){
+                        _fetchFavorites();
+                      }
                       setState(() {
                         tapIndex = i;
                       });
                     },
                     currentIndex: tapIndex,
+                    selectedItemColor: Color(0xff598E0A),
                     items: [
                       BottomNavigationBarItem(
                         icon: Icon(Icons.search),
@@ -888,7 +1011,10 @@ class _MainAppState extends State<MainAppScreen> {
                   width: 50,
                   height: 50,
                   child: GestureDetector(
-                    onTap: () => _showMarkerDetails(marker),
+                    onTap: () {
+                      _fetchFavorites();
+                      _showMarkerDetails(marker);
+                    },
                     child: Icon(
                       Icons.location_on,
                       color: marker.status == "available"
@@ -944,9 +1070,10 @@ class _MainAppState extends State<MainAppScreen> {
                     onTap: () async {
                       Position position = await Geolocator.getCurrentPosition();
                       log("position : ${position.latitude.toString()}");
-                      context
-                          .read<SearchDataBloc>()
-                          .add(GetItemsByCategory(category: category,latitude: position.latitude.toString(),longitude:position.longitude.toString() ));
+                      context.read<SearchDataBloc>().add(GetItemsByCategory(
+                          category: category,
+                          latitude: position.latitude.toString(),
+                          longitude: position.longitude.toString()));
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -1042,95 +1169,291 @@ class _MainAppState extends State<MainAppScreen> {
               );
             }
           },
-  builder: (context, createRequestState) {
-    if (createRequestState is CreateRequestLoading) {
-      return Container(
-        height: MediaQuery.of(context).size.height,
-        width:  MediaQuery.of(context).size.width,
-        color: Colors.black45,
-        child: Center(
-          child: SizedBox(
-              width: 60,
-              height: 60,
-              child: CircularProgressIndicator(color: Colors.green,)),
-        ),
-      );
-    } else {
-      return SizedBox.shrink();
-    }
-
-  },
-)
+          builder: (context, createRequestState) {
+            if (createRequestState is CreateRequestLoading) {
+              return Container(
+                height: MediaQuery.of(context).size.height,
+                width: MediaQuery.of(context).size.width,
+                color: Colors.black45,
+                child: Center(
+                  child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircularProgressIndicator(
+                        color: Colors.green,
+                      )),
+                ),
+              );
+            } else {
+              return SizedBox.shrink();
+            }
+          },
+        )
       ],
     );
   }
 
   Widget buildFAVScreen(BuildContext context) {
-    return Container(
-      color: Color(0xffF1F4F9),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 50,
+    void removeFavorite(int itemId) async {
+      final user = await LocalStorageHelper.getUser();
+      if (user != null) {
+        context
+            .read<DeleteFavoriteBloc>()
+            .add(DeleteFavoriteItem(userId: user.userId, itemId: itemId));
+      }
+    }
+
+    return BlocConsumer<GetFavoritesBloc, GetFavoritesState>(
+      listener: (context, getFavoritesState) {
+        // TODO: implement listener
+      },
+      builder: (context, getFavoritesState) {
+        if (getFavoritesState is GetFavoritesLoading) {
+          return Container(
+            color: Color(0xffF1F4F9),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 50,
+                  ),
+                  Row(
+                    children: [
+                      const Center(
+                        child: Text(
+                          "รายการ ถูกใจของฉัน",
+                          style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(
+                    height: 160,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Column(
+                        children: [
+                          CircularProgressIndicator(
+                            color: Colors.green,
+                          )
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            Row(
-              children: [
-                const Center(
-                  child: Text(
-                    "รายการ ถูกใจของฉัน",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          );
+        } else if (getFavoritesState is GetFavoritesLoaded) {
+          return Stack(
+            children: [
+              Container(
+                color: Color(0xffF1F4F9),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 50,
+                      ),
+                      Row(
+                        children: [
+                          const Center(
+                            child: Text(
+                              "รายการ ถูกใจของฉัน",
+                              style: TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+                      // Order List
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: getFavoritesState.favorites.length,
+                          itemBuilder: (context, index) {
+                            final requestListItem =
+                                getFavoritesState.favorites[index];
+                            // final requestCount = order["requests"].length;
+                            return Dismissible(
+                              key: Key(requestListItem.item.name),
+                              // ต้องใช้ Key ที่ไม่ซ้ำกัน
+                              direction: DismissDirection.endToStart,
+                              // สไลด์จากขวาไปซ้าย
+                              background: Container(
+                                color: Colors.red,
+                                alignment: Alignment.centerRight,
+                                padding: EdgeInsets.only(right: 20),
+                                child: Icon(Icons.delete, color: Colors.white),
+                              ),
+                              onDismissed: (direction) {
+                                // ใส่โค้ดลบรายการที่นี่
+                                print("${requestListItem.item.name} ถูกลบ!");
+                                removeFavorite(requestListItem.item.itemId);
+                              },
+                              child: Card(
+                                elevation: 1,
+                                color: requestListItem.item.status == "available" ? Colors.white : Colors.white30,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                                child: ListTile(
+                                  title: Text(requestListItem.item.name,
+                                      style: TextStyle(fontSize: 16)),
+                                  trailing:
+                                      Icon(requestListItem.item.status == "available"?Icons.arrow_forward_ios:Icons.clear, size: 16),
+                                  onTap: () {
+                                    if(requestListItem.item.status == "available"){
+                                      showItemDetailsOnFav(requestListItem);
+                                    }
+
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      )
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              BlocConsumer<DeleteFavoriteBloc, DeleteFavoriteState>(
+                listener: (context, deleteFavoriteState) {
+                  fetchFavorites() async {
+                    final user = await LocalStorageHelper.getUser();
+                    if (user != null) {
+                      context
+                          .read<GetFavoritesBloc>()
+                          .add(FetchFavoritesByUserId(user.userId));
+                    }
+                  }
 
-            const SizedBox(height: 16),
-            // Order List
-            Expanded(
-              child: ListView.builder(
-                itemCount: myFavoriteList.length,
-                itemBuilder: (context, index) {
-                  final requestListItem = myFavoriteList[index];
-                  // final requestCount = order["requests"].length;
-                  return Dismissible(
-                    key: Key(requestListItem["item"]["name"]),
-                    // ต้องใช้ Key ที่ไม่ซ้ำกัน
-                    direction: DismissDirection.endToStart,
-                    // สไลด์จากขวาไปซ้าย
-                    background: Container(
-                      color: Colors.red,
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.only(right: 20),
-                      child: Icon(Icons.delete, color: Colors.white),
-                    ),
-                    onDismissed: (direction) {
-                      // ใส่โค้ดลบรายการที่นี่
-                      print("${requestListItem["item"]["name"]} ถูกลบ!");
-                    },
-                    child: Card(
-                      elevation: 1,
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      child: ListTile(
-                        title: Text(requestListItem["item"]["name"],
-                            style: TextStyle(fontSize: 16)),
-                        trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          showItemDetailsOnFav(requestListItem);
-                        },
+                  if (deleteFavoriteState is DeleteFavoriteSuccess) {
+                    fetchFavorites();
+                  }
+                  // TODO: implement listener
+                },
+                builder: (context, deleteFavoriteState) {
+                  if (deleteFavoriteState is DeleteFavoriteLoading) {
+                    return Container(
+                      height: MediaQuery.of(context).size.height,
+                      width: MediaQuery.of(context).size.width,
+                      color: Colors.black38,
+                      child: Center(
+                        child: CircularProgressIndicator(color: Colors.white),
                       ),
-                    ),
-                  );
+                    );
+                  } else {
+                    return SizedBox.shrink();
+                  }
                 },
               ),
-            )
-          ],
-        ),
-      ),
+              BlocConsumer<CreateRequestBloc, CreateRequestState>(
+                listener: (context, createRequestState) {
+                  if (createRequestState is CreateRequestSuccess) {
+                    removeFavorite(itemIdCash!);
+                  }
+                  // TODO: implement listener
+                },
+                builder: (context, createRequestState) {
+                  if (createRequestState is CreateRequestLoading) {
+                    return Container(
+                      height: MediaQuery.of(context).size.height,
+                      width: MediaQuery.of(context).size.width,
+                      color: Colors.black38,
+                      child: Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    );
+                  } else {
+                    return SizedBox.shrink();
+                  }
+                },
+              )
+            ],
+          );
+        } else {
+          return Container(
+            color: Color(0xffF1F4F9),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 50,
+                  ),
+                  Row(
+                    children: [
+                      const Center(
+                        child: Text(
+                          "รายการ ถูกใจของฉัน",
+                          style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(
+                    height: 160,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Column(
+                        children: [
+                          Icon(
+                            Icons.warning_amber,
+                            size: 50,
+                          ),
+                          const Text("เกิดข้อผิดพลาด",
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold)),
+                          SizedBox(
+                            height: 16,
+                          ),
+                          ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(color: Colors.green.shade900),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 40),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  "ลองอีกครั้ง",
+                                  style: TextStyle(
+                                      fontSize: 16, color: Colors.black87),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Order List
+                ],
+              ),
+            ),
+          );
+        }
+      },
     );
   }
 
@@ -1247,9 +1570,17 @@ class _MainAppState extends State<MainAppScreen> {
                           ),
                           _buildMenuItem(
                             "สร้างสิ่งของของฉัน",
-                            () {
-                              Navigator.pushNamed(context,
-                                  (Routes.createMyItem).toStringPath());
+                            () async {
+                              final user = await LocalStorageHelper.getUser();
+                              if (user != null) {
+                                if(user.firstName != null) {
+                                  Navigator.pushNamed(context,
+                                      (Routes.createMyItem).toStringPath());
+                                }else{
+                                  _showWarningTOUpdateProfileDialog(context,"create");
+                                }
+                              }
+
                             },
                           ),
                         ],
@@ -1281,7 +1612,4 @@ class _MainAppState extends State<MainAppScreen> {
       ],
     );
   }
-
-
-
 }
