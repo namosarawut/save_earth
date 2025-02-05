@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:save_earth/data/local_storage_helper.dart';
+import 'package:save_earth/data/model/my_item_list_model.dart';
+import 'package:save_earth/logic/Bloc/approve_request/approve_request_bloc.dart';
+import 'package:save_earth/logic/Bloc/get_my_requests/get_my_requests_bloc.dart';
 
 class RequestDetailPage extends StatelessWidget {
   const RequestDetailPage({super.key});
 
-
-  void _showConfirmDialog(BuildContext context, String itemName,String requesterName) {
+  void _showConfirmDialog(
+      BuildContext context, String itemName, Request requestItem, int itemId) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -20,9 +25,10 @@ class RequestDetailPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "คุณแน่ใจหรือไม่ว่าต้องการให้\n$itemName\nกับ $requesterName?",
+                  "คุณแน่ใจหรือไม่ว่าต้องการให้\n$itemName\nกับ ${requestItem.requestBy.username}?",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -30,12 +36,12 @@ class RequestDetailPage extends StatelessWidget {
                     _buildDialogButton(context, "ยกเลิก", Colors.grey, () {
                       Navigator.of(context).pop();
                     }),
-                    _buildDialogButton(context, "ใช่", Colors.green.shade900, () {
+                    _buildDialogButton(context, "ใช่", Colors.green.shade900,
+                        () {
                       // เพิ่มฟังก์ชันเมื่อกดยืนยัน
+                      context.read<ApproveRequestBloc>().add(ApproveRequestById(
+                          itemId: itemId, requestId: requestItem.requestId));
                       Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("การยืนยันเสร็จสมบูรณ์!")),
-                      );
                     }),
                   ],
                 ),
@@ -47,7 +53,8 @@ class RequestDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDialogButton(BuildContext context, String text, Color color, VoidCallback onPressed) {
+  Widget _buildDialogButton(
+      BuildContext context, String text, Color color, VoidCallback onPressed) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
@@ -57,93 +64,157 @@ class RequestDetailPage extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
       ),
-      child: Text(text, style: const TextStyle(fontSize: 16, color: Colors.white)),
+      child:
+          Text(text, style: const TextStyle(fontSize: 16, color: Colors.white)),
     );
+  }
+  void _fetchRequests(BuildContext context) async {
+    final user = await LocalStorageHelper.getUser();
+    if (user != null) {
+      context.read<GetMyRequestsBloc>().add(FetchMyRequests(user.userId));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic>? args =
-    ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    String nameItem = args!["name"] ?? "Unknown";
-    var requestData = args["requestList"];
-    return Scaffold(
-      backgroundColor: Color(0xffF1F4F9),
-      bottomNavigationBar:   Container(
-        color: Colors.white,
-        child: Row(mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: MediaQuery.of(context).size.width-23,
-              child: ElevatedButton(
-                onPressed: () {
-                  _showConfirmDialog(context,nameItem,requestData!["request_by"]["username"]);
+    final args = ModalRoute.of(context)?.settings.arguments;
 
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade900,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text(
-                  "อนุมัติ",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: ListView(
-          // crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // const SizedBox(height: 50),
-            // Back Button
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, size: 30),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                Center(
-                  child: Text(
-                    "$nameItem โดย ${requestData!["request_by"]["username"]}",
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Detail Card
-            Card(
+    if (args is Map<String, dynamic>) {
+      final String name = args["name"] ?? "ไม่มีชื่อ";
+      final int itemId = args["itemId"] ?? 0;
+      final Request requestItem =
+          args["requestList"]; // ✅ รับค่า Object `Request`
+      return Stack(
+        children: [
+          Scaffold(
+            backgroundColor: Color(0xffF1F4F9),
+            bottomNavigationBar: Container(
               color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoText("ชื่อ", "${requestData!["request_by"]["contact"]["first_name"]} ${requestData["request_by"]["contact"]["last_name"]}"),
-                    _buildInfoText("เบอร์โทรศัพท์", "${requestData["request_by"]["contact"]["phone_number"]}"),
-                    _buildInfoText("เหตุผลการร้องขอ", "${requestData["reason"]}", isReason: true),
-                  ],
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width - 23,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _showConfirmDialog(context, name, requestItem, itemId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade900,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text(
+                        "อนุมัติ",
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+            body: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: ListView(
+                // crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // const SizedBox(height: 50),
+                  // Back Button
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, size: 30),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                      ),
+                      Center(
+                        child: Text(
+                          "$name โดย ${requestItem.requestBy.username}",
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Detail Card
+                  Card(
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInfoText("ชื่อ",
+                              "${requestItem.requestBy.firstName} ${requestItem.requestBy.lastName}"),
+                          _buildInfoText("เบอร์โทรศัพท์",
+                              "${requestItem.requestBy.phoneNumber}"),
+                          _buildInfoText(
+                              "เหตุผลการร้องขอ", "${requestItem.reason}",
+                              isReason: true),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          BlocConsumer<ApproveRequestBloc, ApproveRequestState>(
+  listener: (context, approveRequestState) {
+    // TODO: implement listener
+    if(approveRequestState is ApproveRequestSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("อนุมัตสำเร็จ")),
+      );
+      _fetchRequests(context);
+      Navigator.pop(context);
+      Navigator.pop(context);
+    }else if(approveRequestState is ApproveRequestError){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("อนุมัตไม่สำเร็จ")),
+      );
+
+    }
+  },
+  builder: (context, approveRequestState) {
+    if(approveRequestState is ApproveRequestLoading) {
+      return Container(
+        color: Colors.black45,
+        height: MediaQuery.of(context).size.height,
+        width: MediaQuery.of(context).size.height,
+        child: Center(
+          child: Container(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              color: Colors.green,
+            ),
+          ),
         ),
-      ),
-    );
+      );
+    }else{
+      return Container();
+    }
+
+  },
+)
+        ],
+      );
+    } else {
+      return Scaffold(
+        appBar: AppBar(title: Text("Error")),
+        body: Center(child: Text("❌ ไม่มีข้อมูล")),
+      );
+    }
   }
 
   Widget _buildInfoText(String label, String value, {bool isReason = false}) {

@@ -12,6 +12,7 @@ import 'package:save_earth/data/local_storage_helper.dart';
 import 'package:save_earth/data/model/item_model.dart';
 import 'package:save_earth/data/model/user_model.dart';
 import 'package:save_earth/logic/Bloc/auth/auth_bloc.dart';
+import 'package:save_earth/logic/Bloc/create_request/create_request_bloc.dart';
 import 'package:save_earth/logic/Bloc/item/item_bloc.dart';
 import 'package:save_earth/logic/Bloc/search_data/searh_data_bloc.dart';
 import 'package:save_earth/route/convert_route.dart';
@@ -27,6 +28,7 @@ class _MainAppState extends State<MainAppScreen> {
   int tapIndex = 0;
   LatLng? _currentPosition;
   final TextEditingController _searchController = TextEditingController();
+  TextEditingController reasonController = TextEditingController();
   final MapController _mapController = MapController();
   double _currentZoom = 13.0;
   List<String>? allItems;
@@ -175,7 +177,6 @@ class _MainAppState extends State<MainAppScreen> {
       try {
         context.read<ItemBloc>().add(LoadUniqueItemNames());
 
-
         bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (!serviceEnabled) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -290,13 +291,18 @@ class _MainAppState extends State<MainAppScreen> {
     });
 
     // เมื่อได้ตำแหน่งล่าสุดแล้ว ให้เลื่อนแผนที่ไปที่ตำแหน่งนั้น
-    if (_currentPosition != null) {
-      _mapController.move(_currentPosition!, _currentZoom);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        if (_currentPosition != null) {
+          _mapController.move(_currentPosition!, _currentZoom);
+        }
+      }
+    });
+
   }
 
   void showRequestDialog(BuildContext context, ItemModel marker) {
-    TextEditingController reasonController = TextEditingController();
+
 
     showDialog(
       context: context,
@@ -343,7 +349,8 @@ class _MainAppState extends State<MainAppScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context); // ปิด Dialog
+                    _submitRequest(marker);
+
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[800], // สีเขียวเข้ม
@@ -378,7 +385,7 @@ class _MainAppState extends State<MainAppScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(20), // กำหนดมุมโค้ง 20
                 child: Image.network(
-                  "http://172.20.10.2:8080${marker.imageUrl}",
+                  "http://192.168.1.157:8080${marker.imageUrl}",
                   width: MediaQuery.of(context).size.width - 8,
                   height: 200, // ความสูง 16:9
                   fit: BoxFit.cover, // ครอบคลุมพื้นที่โดยไม่เสียอัตราส่วน
@@ -463,6 +470,20 @@ class _MainAppState extends State<MainAppScreen> {
     );
   }
 
+  void _submitRequest(ItemModel marker) async {
+    if (user != null) {
+      Navigator.pop(context);
+
+      context.read<CreateRequestBloc>().add(
+        SubmitRequest(
+          itemId: marker.itemId,
+          userId: user!.userId,
+          reason: reasonController.text,
+        ),
+      );
+    }
+  }
+
   Widget _buildDialogButton(
       BuildContext context, String text, Color color, VoidCallback onPressed) {
     return ElevatedButton(
@@ -534,6 +555,174 @@ class _MainAppState extends State<MainAppScreen> {
       },
     );
   }
+  void showRequestDialogOnFav(
+      BuildContext context, Map<String, dynamic> requestListItem) {
+    TextEditingController reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20), // มุมโค้ง 20
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "เหตุผลการร้องขอ สิ่งของ",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: reasonController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: "เหตุผลที่ท่านขอรับสิ่งของชิ้นนี้",
+                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: EdgeInsets.all(10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.green),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // ปิด Dialog
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[800], // สีเขียวเข้ม
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    "ส่งคำขอ",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  void showItemDetailsOnFav(Map<String, dynamic> requestListItem) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          width: MediaQuery.of(context).size.width - 16,
+          padding: EdgeInsets.all(16.0),
+          child: ListView(
+            // mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20), // กำหนดมุมโค้ง 20
+                child: Image.network(
+                  requestListItem['item']['image_url'],
+                  width: MediaQuery.of(context).size.width - 8,
+                  height: 200, // ความสูง 16:9
+                  fit: BoxFit.cover, // ครอบคลุมพื้นที่โดยไม่เสียอัตราส่วน
+                ),
+              ),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text(requestListItem['item']['name'],
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              SizedBox(height: 5),
+              Container(
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Color(0xffD9D9D9)),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(
+                        requestListItem['item']['description'],
+                        style: TextStyle(fontSize: 16),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+              // Text(marker.description),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text(
+                    "หมวดหมู่: ${requestListItem['item']['category']}",
+                    style: TextStyle(fontSize: 16),
+                  )
+                ],
+              ),
+              SizedBox(height: 10),
+              Text("ลงประกาศเมื่อ: ${requestListItem['item']['created_at']}"),
+              SizedBox(height: 40),
+              ElevatedButton(
+                onPressed: () {
+                  // Navigator.pushNamed(context, (Routes.mainApp).toStringPath());
+                  showRequestDialogOnFav(context, requestListItem);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade900,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 80,
+                  ),
+                ),
+                child: Text(
+                  "ส่งคำขอ",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  Widget _buildMenuItem(String title, VoidCallback? onTap) {
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ListTile(
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: onTap,
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -562,10 +751,16 @@ class _MainAppState extends State<MainAppScreen> {
             listener: (context, searchDataState) {
               if (searchDataState is SearchItemListLoaded) {
                 if (searchDataState.items.isNotEmpty) {
-                    _mapController.move(
-                        LatLng(searchDataState.items[0].latitude,
-                            searchDataState.items[0].longitude),
-                        _currentZoom);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      _mapController.move(
+                          LatLng(searchDataState.items[0].latitude,
+                              searchDataState.items[0].longitude),
+                          _currentZoom);
+                    }
+                  });
+
+
 
                 }
               }
@@ -619,6 +814,7 @@ class _MainAppState extends State<MainAppScreen> {
                   ),
                 );
               } else {
+                log("searchDataState : ${searchDataState is SearchItemListLoaded}");
                 return Scaffold(
                   body: Container(
                     width: MediaQuery.of(context).size.width,
@@ -831,165 +1027,41 @@ class _MainAppState extends State<MainAppScreen> {
             ),
           ),
         ),
+        BlocConsumer<CreateRequestBloc, CreateRequestState>(
+          listener: (context, createRequestState) {
+            if (createRequestState is CreateRequestSuccess) {
+              reasonController.clear();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("ส่งคำร้องขอของท่านเรียบร้อยแล้ว")),
+              );
+              Navigator.pop(context);
+            } else if (createRequestState is CreateRequestError) {
+              reasonController.clear();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("ส่งคำร้องขอของท่าน ล้มเหลว")),
+              );
+            }
+          },
+  builder: (context, createRequestState) {
+    if (createRequestState is CreateRequestLoading) {
+      return Container(
+        height: MediaQuery.of(context).size.height,
+        width:  MediaQuery.of(context).size.width,
+        color: Colors.black45,
+        child: Center(
+          child: SizedBox(
+              width: 60,
+              height: 60,
+              child: CircularProgressIndicator(color: Colors.green,)),
+        ),
+      );
+    } else {
+      return SizedBox.shrink();
+    }
+
+  },
+)
       ],
-    );
-  }
-
-  void showRequestDialogOnFav(
-      BuildContext context, Map<String, dynamic> requestListItem) {
-    TextEditingController reasonController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20), // มุมโค้ง 20
-          ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "เหตุผลการร้องขอ สิ่งของ",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10),
-              TextFormField(
-                controller: reasonController,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: "เหตุผลที่ท่านขอรับสิ่งของชิ้นนี้",
-                  hintStyle: TextStyle(color: Colors.grey[600]),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: EdgeInsets.all(10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide(color: Colors.green),
-                  ),
-                ),
-              ),
-              SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context); // ปิด Dialog
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[800], // สีเขียวเข้ม
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    "ส่งคำขอ",
-                    style: TextStyle(fontSize: 16, color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void showItemDetailsOnFav(Map<String, dynamic> requestListItem) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          width: MediaQuery.of(context).size.width - 16,
-          padding: EdgeInsets.all(16.0),
-          child: ListView(
-            // mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20), // กำหนดมุมโค้ง 20
-                child: Image.network(
-                  requestListItem['item']['image_url'],
-                  width: MediaQuery.of(context).size.width - 8,
-                  height: 200, // ความสูง 16:9
-                  fit: BoxFit.cover, // ครอบคลุมพื้นที่โดยไม่เสียอัตราส่วน
-                ),
-              ),
-              SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(requestListItem['item']['name'],
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              SizedBox(height: 5),
-              Container(
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Color(0xffD9D9D9)),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text(
-                        requestListItem['item']['description'],
-                        style: TextStyle(fontSize: 16),
-                      )
-                    ],
-                  ),
-                ),
-              ),
-              // Text(marker.description),
-              SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    "หมวดหมู่: ${requestListItem['item']['category']}",
-                    style: TextStyle(fontSize: 16),
-                  )
-                ],
-              ),
-              SizedBox(height: 10),
-              Text("ลงประกาศเมื่อ: ${requestListItem['item']['created_at']}"),
-              SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () {
-                  // Navigator.pushNamed(context, (Routes.mainApp).toStringPath());
-                  showRequestDialogOnFav(context, requestListItem);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade900,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 80,
-                  ),
-                ),
-                child: Text(
-                  "ส่งคำขอ",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -1099,7 +1171,7 @@ class _MainAppState extends State<MainAppScreen> {
                               ? AssetImage("assets/image/profile.jpeg")
                                   as ImageProvider
                               : NetworkImage(
-                                  "http://172.20.10.2:8080${user!.profileImageUrl}"),
+                                  "http://192.168.1.157:8080${user!.profileImageUrl}"),
                     ),
                   ),
                 ),
@@ -1210,16 +1282,6 @@ class _MainAppState extends State<MainAppScreen> {
     );
   }
 
-  Widget _buildMenuItem(String title, VoidCallback? onTap) {
-    return Card(
-      elevation: 1,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: ListTile(
-        title: Text(title, style: const TextStyle(fontSize: 16)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
-      ),
-    );
-  }
+
+
 }

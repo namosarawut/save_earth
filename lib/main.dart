@@ -5,17 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:save_earth/core/app_core.dart';
 import 'package:save_earth/data/data_store.dart';
 import 'package:save_earth/data/local_storage_helper.dart';
 import 'package:save_earth/firebase_options.dart';
 import 'package:save_earth/logic/Bloc/bloc.dart';
-import 'package:save_earth/presentation/screens/auth/login_register_screen.dart';
 import 'package:save_earth/repositores/auth_repository.dart';
 import 'package:save_earth/repositores/item_repository.dart';
+import 'package:save_earth/repositores/request_repository.dart';
 import 'package:save_earth/route/map_routing.dart';
 import 'package:save_earth/service/api_service.dart';
 
@@ -27,15 +24,17 @@ Future<void> main() async {
   final apiService = ApiService();
   final authRepository = AuthRepository(apiService);
   final itemRepository = ItemRepository(apiService);
+  final requestRepository = RequestRepository(apiService);
 
-  runApp(EvApp(authRepository: authRepository,itemRepository:itemRepository));
+  runApp(EvApp(authRepository: authRepository,itemRepository:itemRepository,requestRepository:requestRepository));
 }
 
 class EvApp extends StatelessWidget {
   final AuthRepository authRepository;
   final ItemRepository itemRepository;
+  final RequestRepository requestRepository;
 
-  EvApp({super.key, required this.authRepository, required this.itemRepository});
+  EvApp({super.key, required this.authRepository, required this.itemRepository ,required this.requestRepository});
 
   final _routes = evShopRoutes;
 
@@ -86,7 +85,7 @@ class EvApp extends StatelessWidget {
             String initialRoute = snapshot.data![1] as String; // ดึงค่าจาก `_checkUserSession()`
 
             return MultiBlocProvider(
-              providers: BlocList(authRepository,itemRepository).blocs,
+              providers: BlocList(authRepository,itemRepository,requestRepository).blocs,
               child: MaterialApp(
                 title: 'save earth',
                 theme: ThemeData(

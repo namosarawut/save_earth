@@ -7,7 +7,7 @@ class ApiService {
 
   ApiService() {
     _dio = Dio(BaseOptions(
-      baseUrl: "http://172.20.10.2:8080", // ตั้งค่า base URL ของ API
+      baseUrl: "http://192.168.1.157:8080", // ตั้งค่า base URL ของ API
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ));

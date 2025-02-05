@@ -466,7 +466,8 @@ class MyItemDetailScreen extends StatelessWidget {
 
   },
 );
-     } else {
+     }
+     else {
        return Scaffold(
          body: Container(
            width: MediaQuery.of(context).size.width,
@@ -475,6 +476,18 @@ class MyItemDetailScreen extends StatelessWidget {
            child: Center(
                child: Column(
                  children: [
+                   Row(
+                     mainAxisAlignment: MainAxisAlignment.start,
+                     children: [
+                       IconButton(
+                         icon: const Icon(Icons.arrow_back, size: 30),
+                         onPressed: () {
+                           Navigator.pop(context);
+                         },
+                       ),
+                     ],
+                   ),
+
                    Icon(
                      Icons.error_outline,
                      color: Colors.white,
