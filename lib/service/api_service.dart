@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:save_earth/constants/constants.dart';
 import 'package:save_earth/intercepter/api_interceptor.dart';
 
 
@@ -7,7 +8,7 @@ class ApiService {
 
   ApiService() {
     _dio = Dio(BaseOptions(
-      baseUrl: "http://192.168.1.157:8080", // ตั้งค่า base URL ของ API
+      baseUrl: saveEarthBaseUrl, // ตั้งค่า base URL ของ API
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ));

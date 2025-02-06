@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mime/mime.dart';
+import 'package:save_earth/constants/constants.dart';
 import 'package:save_earth/data/local_storage_helper.dart';
 import 'package:save_earth/data/model/favorite_model.dart';
 import 'package:save_earth/data/model/item_model.dart';
@@ -25,7 +26,7 @@ class MainAppScreen extends StatefulWidget {
   const MainAppScreen({super.key});
 
   @override
-  _MainAppState createState() => _MainAppState();
+  State<MainAppScreen> createState() => _MainAppState();
 }
 
 class _MainAppState extends State<MainAppScreen> {
@@ -54,9 +55,9 @@ class _MainAppState extends State<MainAppScreen> {
         await ImagePicker().pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
-      print("🔍 Selected File: ${pickedFile.path}");
+      log("🔍 Selected File: ${pickedFile.path}");
       String? mimeType = lookupMimeType(pickedFile.path); // ตรวจสอบ MIME type
-      print("📌 MIME Type: $mimeType");
+      log("📌 MIME Type: $mimeType");
 
       if (mimeType == "image/jpeg" ||
           mimeType == "image/png" ||
@@ -64,7 +65,7 @@ class _MainAppState extends State<MainAppScreen> {
         final user = await LocalStorageHelper.getUser(); // โหลดข้อมูล user
 
         if (user == null) {
-          print("⚠️ User is null. Cannot update profile.");
+          log("⚠️ User is null. Cannot update profile.");
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text("⚠️ ไม่สามารถอัพเดทโปรไฟล์ได้ กรุณาลองใหม่")));
           return;
@@ -97,7 +98,14 @@ class _MainAppState extends State<MainAppScreen> {
   UserModel? user;
 
   Future<void> getUserData() async {
-    user = await LocalStorageHelper.getUser();
+    final newUser = await LocalStorageHelper.getUser(); // ✅ โหลดข้อมูลก่อน
+    if (!mounted) return; // ✅ ป้องกัน setState() หลังจาก widget ถูก dispose
+
+    setState(() {
+      user = newUser; // ✅ อัปเดต state เฉพาะใน setState()
+    });
+
+    log("user name: ${user}");
   }
 
   void initApp() {
@@ -135,7 +143,7 @@ class _MainAppState extends State<MainAppScreen> {
             ));
       } catch (e) {
         if (!mounted) return;
-        print("🚨 Error getting location: $e");
+        log("🚨 Error getting location: $e");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("❌ เกิดข้อผิดพลาดในการดึงตำแหน่ง")),
         );
@@ -183,7 +191,7 @@ class _MainAppState extends State<MainAppScreen> {
     try {
       position = await Geolocator.getCurrentPosition();
     } catch (e) {
-      print("Error getting location: $e");
+      log("Error getting location: $e");
       return;
     }
 
@@ -219,7 +227,7 @@ class _MainAppState extends State<MainAppScreen> {
     }
 
     Position position = await Geolocator.getCurrentPosition();
-    print("Location : ${position.latitude}, ${position.longitude}");
+    log("Location : ${position.latitude}, ${position.longitude}");
 
     setState(() {
       _currentPosition = LatLng(position.latitude, position.longitude);
@@ -341,7 +349,7 @@ class _MainAppState extends State<MainAppScreen> {
         return BlocConsumer<GetFavoritesBloc, GetFavoritesState>(
           listener: (context, getFavoritesState) {
             if (getFavoritesState is GetFavoritesLoaded) {
-              print("FavData : ${getFavoritesState.favorites[0].item.itemId}");
+              log("FavData : ${getFavoritesState.favorites[0].item.itemId}");
               if (isItemFavorite(getFavoritesState.favorites, marker.itemId)) {
                 setState(() {
                   isFavorite = true;
@@ -392,7 +400,7 @@ class _MainAppState extends State<MainAppScreen> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(20),
                                 child: Image.network(
-                                  "http://192.168.1.157:8080${marker.imageUrl}",
+                                  "$saveEarthBaseUrl${marker.imageUrl}",
                                   width: MediaQuery.of(context).size.width - 8,
                                   height: 200,
                                   fit: BoxFit.cover,
@@ -755,7 +763,7 @@ class _MainAppState extends State<MainAppScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Image.network(
-                  "http://192.168.1.157:8080${requestListItem.item.imageUrl}",
+                  "${saveEarthBaseUrl}${requestListItem.item.imageUrl}",
                   width: MediaQuery.of(context).size.width - 8,
                   height: 200,
                   fit: BoxFit.cover,
@@ -828,7 +836,6 @@ class _MainAppState extends State<MainAppScreen> {
             ],
           ),
         );
-        ;
       },
     );
   }
@@ -1296,7 +1303,7 @@ class _MainAppState extends State<MainAppScreen> {
                               ),
                               onDismissed: (direction) {
                                 // ใส่โค้ดลบรายการที่นี่
-                                print("${requestListItem.item.name} ถูกลบ!");
+                                log("${requestListItem.item.name} ถูกลบ!");
                                 removeFavorite(requestListItem.item.itemId);
                               },
                               child: Card(
@@ -1494,7 +1501,7 @@ class _MainAppState extends State<MainAppScreen> {
                               ? AssetImage("assets/image/profile.jpeg")
                                   as ImageProvider
                               : NetworkImage(
-                                  "http://192.168.1.157:8080${user!.profileImageUrl}"),
+                                  "${saveEarthBaseUrl}${user!.profileImageUrl}"),
                     ),
                   ),
                 ),
@@ -1557,8 +1564,10 @@ class _MainAppState extends State<MainAppScreen> {
                               context
                                   .read<AuthBloc>()
                                   .add(GetUserById(user!.userId));
-                              Navigator.pushNamed(
-                                  context, (Routes.editProfile).toStringPath());
+                              Navigator.pushNamed(context, Routes.editProfile.toStringPath())
+                                  .then((_) {
+                                getUserData(); // ✅ อัปเดตข้อมูลเมื่อกลับจาก Edit Profile
+                              });
                             },
                           ),
                           _buildMenuItem(

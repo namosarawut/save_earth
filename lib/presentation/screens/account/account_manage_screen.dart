@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:save_earth/data/local_storage_helper.dart';
 import 'package:save_earth/logic/Bloc/auth/auth_bloc.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -42,10 +43,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
   listener: (context, authState) {
+    void fetchUserDAta(BuildContext context) async {
+      final user = await LocalStorageHelper.getUser();
+      if (user != null) {
+        context
+            .read<AuthBloc>()
+            .add(GetUserById(user.userId));  }
+    }
     if(authState is ProfileUpdateSuccess){
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('บันทึกข้อมูลเรียบร้อย!')),
       );
+      fetchUserDAta(context);
     }
     if(authState is UserFetched){
     emailController = TextEditingController(text: authState.user.email);
