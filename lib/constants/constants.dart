@@ -1,1 +1,1 @@
-const String saveEarthBaseUrl = "http://192.168.1.6:8080";
+const String saveEarthBaseUrl = "http://10.242.138.210:8080";
